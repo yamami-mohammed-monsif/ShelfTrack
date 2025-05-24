@@ -17,6 +17,7 @@ import type { Product, ProductType } from '@/lib/types';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale'; 
 import { Pencil } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ProductsTableProps {
   products: Product[];
@@ -33,6 +34,17 @@ const unitSuffix: Record<ProductType, string> = {
   powder: 'كجم',
   liquid: 'لتر',
   unit: 'قطعة',
+};
+
+const lowStockThresholds: Record<ProductType, number> = {
+  powder: 1,
+  liquid: 2,
+  unit: 3,
+};
+
+const isLowStock = (product: Product): boolean => {
+  const threshold = lowStockThresholds[product.type];
+  return product.quantity < threshold;
 };
 
 export function ProductsTable({ products, onEditProduct }: ProductsTableProps) {
@@ -61,7 +73,7 @@ export function ProductsTable({ products, onEditProduct }: ProductsTableProps) {
         </TableHeader>
         <TableBody>
           {products.sort((a, b) => b.timestamp - a.timestamp).map((product) => (
-            <TableRow key={product.id}>
+            <TableRow key={product.id} className={cn(isLowStock(product) && "bg-destructive/10")}>
               <TableCell className="font-medium rtl:text-right">
                 <Link href={`/products/${product.id}`} className="hover:underline text-primary">
                   {product.name}
@@ -71,7 +83,10 @@ export function ProductsTable({ products, onEditProduct }: ProductsTableProps) {
               <TableCell className="text-center">
                 {product.wholesalePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
               </TableCell>
-              <TableCell className="text-center">
+              <TableCell className={cn(
+                  "text-center",
+                  isLowStock(product) && "text-destructive font-semibold"
+                )}>
                 {product.quantity.toLocaleString()} {unitSuffix[product.type]}
               </TableCell>
               <TableCell className="text-left rtl:text-right">
@@ -89,4 +104,3 @@ export function ProductsTable({ products, onEditProduct }: ProductsTableProps) {
     </div>
   );
 }
-
