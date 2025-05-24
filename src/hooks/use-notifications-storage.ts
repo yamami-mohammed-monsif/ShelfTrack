@@ -6,6 +6,7 @@ import type { Notification } from '@/lib/types';
 
 const NOTIFICATIONS_STORAGE_KEY = 'bouzid_store_notifications';
 const MAX_NOTIFICATIONS = 50; // Keep a reasonable number of notifications
+const ONE_WEEK_IN_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface NotificationsState {
   notifications: Notification[];
@@ -33,25 +34,38 @@ type NotificationAction =
   | { type: typeof NotificationActionTypes.MARK_READ; payload: { notificationId: string } }
   | { type: typeof NotificationActionTypes.MARK_ALL_READ };
 
+
+function pruneOldReadNotifications(notifications: Notification[]): Notification[] {
+  const now = Date.now();
+  return notifications.filter(n => {
+    if (n.read && (now - n.timestamp > ONE_WEEK_IN_MS)) {
+      return false; // Prune if read and older than one week
+    }
+    return true;
+  });
+}
+
 function notificationsReducer(state: NotificationsState, action: NotificationAction): NotificationsState {
   switch (action.type) {
     case NotificationActionTypes.SET_LOADED:
+      const prunedInitial = pruneOldReadNotifications(action.payload);
       return {
-        notifications: action.payload,
+        notifications: prunedInitial.sort((a, b) => b.timestamp - a.timestamp).slice(0, MAX_NOTIFICATIONS),
         isLoaded: true,
       };
     case NotificationActionTypes.ADD: {
       const { newNotification } = action.payload;
-      // For low-stock, prevent duplicate unread notifications for the same product
       if (newNotification.productId) {
         const existingUnreadLowStockNotification = state.notifications.find(
           (n) => n.productId === newNotification.productId && !n.read && n.message.includes("أوشك على النفاد")
         );
         if (existingUnreadLowStockNotification) {
-          return state; // No change, duplicate unread low-stock notification
+          return state; 
         }
       }
-      const updatedNotifications = [newNotification, ...state.notifications]
+      let updatedNotifications = [newNotification, ...state.notifications];
+      updatedNotifications = pruneOldReadNotifications(updatedNotifications);
+      updatedNotifications = updatedNotifications
         .sort((a, b) => b.timestamp - a.timestamp)
         .slice(0, MAX_NOTIFICATIONS);
       return { ...state, notifications: updatedNotifications };
@@ -75,7 +89,6 @@ function notificationsReducer(state: NotificationsState, action: NotificationAct
 
 function dispatch(action: NotificationAction) {
   memoryState = notificationsReducer(memoryState, action);
-  // Save to localStorage after state update, if initial load is complete
   if (memoryState.isLoaded) {
     try {
       localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(memoryState.notifications));
@@ -83,7 +96,6 @@ function dispatch(action: NotificationAction) {
       console.error("Failed to save notifications to localStorage:", error);
     }
   }
-  // Notify all listeners using queueMicrotask to defer execution
   queueMicrotask(() => {
     listeners.forEach((listener) => listener(memoryState));
   });
@@ -95,8 +107,7 @@ export function useNotificationsStorage() {
   const [state, setState] = useState<NotificationsState>(memoryState);
 
   useEffect(() => {
-    // This effect runs once on mount to load initial state and set up listener
-    if (!memoryState.isLoaded) { // Ensure initial load happens only once globally
+    if (!memoryState.isLoaded) { 
       let initialNotifications: Notification[] = [];
       try {
         const storedNotifications = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
@@ -105,28 +116,24 @@ export function useNotificationsStorage() {
         }
       } catch (error) {
         console.error("Failed to load notifications from localStorage:", error);
-        // Keep initialNotifications as []
       }
-      // Dispatch an action to update the global state and mark as loaded
       dispatch({ type: NotificationActionTypes.SET_LOADED, payload: initialNotifications });
     }
     
-    // Subscribe to changes in the global state
     const listener = (newState: NotificationsState) => setState(newState);
     listeners.push(listener);
     
-    // Update component state if global state already loaded (e.g. on fast refresh)
     if (memoryState.isLoaded && !state.isLoaded) {
         setState(memoryState);
     }
 
-    return () => { // Cleanup: unsubscribe
+    return () => { 
       const index = listeners.indexOf(listener);
       if (index > -1) {
         listeners.splice(index, 1);
       }
     };
-  }, [state.isLoaded]); // Rerun if local isLoaded state changes, e.g. after fast refresh
+  }, [state.isLoaded]); 
 
   const addNotification = useCallback((
     message: string,
@@ -152,21 +159,19 @@ export function useNotificationsStorage() {
     dispatch({ type: NotificationActionTypes.MARK_ALL_READ });
   }, []);
 
-  const unreadNotifications = useMemo(() => {
-    return state.notifications.filter((n) => !n.read).sort((a,b) => b.timestamp - a.timestamp);
+  // All notifications, already sorted by timestamp descending by the reducer
+  const allSortedNotifications = useMemo(() => {
+     return state.notifications;
   }, [state.notifications]);
 
   const unreadCount = useMemo(() => {
-    return unreadNotifications.length;
-  }, [unreadNotifications]);
-
-  const allSortedNotifications = useMemo(() => {
-     return [...state.notifications].sort((a,b) => b.timestamp - a.timestamp);
+    return state.notifications.filter(n => !n.read).length;
   }, [state.notifications]);
 
+
   return {
-    notifications: allSortedNotifications,
-    unreadNotifications,
+    notifications: allSortedNotifications, 
+    // unreadNotifications, // No longer explicitly needed as we iterate allSortedNotifications and check .read
     addNotification,
     markAsRead,
     markAllAsRead,

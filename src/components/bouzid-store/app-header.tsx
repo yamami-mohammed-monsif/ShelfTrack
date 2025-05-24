@@ -5,14 +5,19 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Home, Archive, Menu, ClipboardList, Bell, CheckCircle } from 'lucide-react';
+import { Home, Archive, Menu, ClipboardList, Bell } from 'lucide-react';
 import { useNotificationsStorage } from '@/hooks/use-notifications-storage';
 import { formatDistanceToNow } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
 export function AppHeader() {
-  const { unreadCount, unreadNotifications, markAllAsRead, isLoaded: notificationsLoaded } = useNotificationsStorage();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, isLoaded: notificationsLoaded } = useNotificationsStorage();
+
+  const handleNotificationClick = (notificationId: string) => {
+    markAsRead(notificationId);
+    // Navigation will occur via the Link component
+  };
 
   return (
     <header className="bg-primary text-primary-foreground p-4 shadow-md sticky top-0 z-50">
@@ -62,30 +67,32 @@ export function AppHeader() {
                 <div className="p-4 border-b border-border">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold">الإشعارات</h3>
-                    {unreadNotifications.length > 0 && (
+                    {notifications.length > 0 && unreadCount > 0 && ( // Show button if there are notifications and some are unread
                        <Button variant="link" size="sm" onClick={markAllAsRead} className="text-primary p-0 h-auto">
-                         وضع علامة على الكل كمقروء
+                         تحديد الكل كمقروء
                        </Button>
                     )}
                   </div>
                 </div>
                 <ScrollArea className="h-[300px]">
-                  {unreadNotifications.length === 0 ? (
-                    <p className="text-muted-foreground text-center p-4">لا توجد إشعارات جديدة.</p>
+                  {notifications.length === 0 ? (
+                    <p className="text-muted-foreground text-center p-4">لا توجد إشعارات.</p>
                   ) : (
                     <div className="divide-y divide-border">
-                      {unreadNotifications.map((notification) => (
+                      {notifications.map((notification) => (
                         <Link
                           key={notification.id}
                           href={notification.href || '#'}
+                          onClick={() => handleNotificationClick(notification.id)}
                           className={cn(
                             "block p-3 hover:bg-muted/50",
+                            !notification.read && "bg-primary/10", // Highlight unread
                             !notification.href && "pointer-events-none" 
                           )}
                         >
                           <p className={cn(
-                              "text-sm font-medium",
-                              !notification.read ? "text-foreground" : "text-muted-foreground"
+                              "text-sm",
+                              !notification.read ? "font-semibold text-foreground" : "text-muted-foreground"
                           )}>
                             {notification.message}
                           </p>
@@ -100,13 +107,14 @@ export function AppHeader() {
                     </div>
                   )}
                 </ScrollArea>
-                 {unreadNotifications.length > 0 && unreadNotifications.length < 5 && ( // Example condition
+                 {/* Placeholder for a "View All Notifications" page link if needed in the future */}
+                 {/* {notifications.length > 0 && (
                     <div className="p-2 text-center border-t border-border">
                         <Link href="/notifications" passHref legacyBehavior>
                              <Button variant="link" size="sm" className="text-primary">عرض كل الإشعارات</Button>
                         </Link>
                     </div>
-                 )}
+                 )} */}
               </PopoverContent>
             </Popover>
           )}
