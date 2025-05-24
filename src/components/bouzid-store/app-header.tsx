@@ -2,7 +2,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Home, Archive, Menu } from 'lucide-react';
 
 export function AppHeader() {
@@ -39,7 +39,13 @@ export function AppHeader() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[250px] sm:w-[300px] bg-card text-card-foreground p-6">
-              <div className="flex flex-col space-y-4 mt-6">
+              <SheetHeader className="mb-6 text-start">
+                <SheetTitle className="text-xl">القائمة</SheetTitle>
+                <SheetDescription>
+                  تصفح أقسام التطبيق المختلفة من هنا.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="flex flex-col space-y-4">
                 <SheetClose asChild>
                   <Button asChild variant="ghost" className="justify-start text-lg text-foreground hover:bg-accent hover:text-accent-foreground w-full">
                     <Link href="/">
@@ -64,3 +70,4 @@ export function AppHeader() {
     </header>
   );
 }
+
