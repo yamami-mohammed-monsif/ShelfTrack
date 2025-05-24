@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button'; // Added buttonVariants import
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -132,8 +132,6 @@ export function AppHeader() {
                             !notification.read && "bg-primary/10", 
                             !notification.href && "pointer-events-none" 
                           )}
-                          passHref={!notification.href} // passHref only if there is no href for legacy reasons, else modern Link handles it.
-                                                      // Actually, modern Link should always handle it. Removed passHref.
                         >
                           <p className={cn(
                               "text-sm",
@@ -220,3 +218,4 @@ export function AppHeader() {
     </header>
   );
 }
+
