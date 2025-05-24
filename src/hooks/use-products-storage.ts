@@ -34,10 +34,10 @@ export function useProductsStorage() {
     }
   }, [products, isLoaded]);
 
-  const createLowStockNotification = (product: Product) => {
+  const createLowStockNotification = useCallback((product: Product) => {
     const message = `"${product.name}" أوشك على النفاد. الكمية المتبقية: ${product.quantity.toLocaleString()} ${unitSuffix[product.type]}.`;
     addNotification(message, product.id, `/products/${product.id}`);
-  };
+  }, [addNotification]);
 
   const addProduct = useCallback((productData: ProductFormData): Product => {
     const newProduct: Product = {
@@ -50,7 +50,7 @@ export function useProductsStorage() {
       createLowStockNotification(newProduct);
     }
     return newProduct;
-  }, [addNotification]);
+  }, [createLowStockNotification]);
 
   const editProduct = useCallback((productId: string, updatedData: ProductFormData): Product | undefined => {
     let originalProduct: Product | undefined;
@@ -59,7 +59,7 @@ export function useProductsStorage() {
     setProducts((prevProducts) => {
       return prevProducts.map((product) => {
         if (product.id === productId) {
-          originalProduct = { ...product }; // Capture state before edit
+          originalProduct = { ...product }; 
           editedProduct = {
             ...product,
             ...updatedData,
@@ -79,7 +79,7 @@ export function useProductsStorage() {
       }
     }
     return editedProduct;
-  }, [addNotification]);
+  }, [createLowStockNotification]);
 
   const decreaseProductQuantity = useCallback((productId: string, quantityToDecrease: number): Product | undefined => {
     let originalProduct: Product | undefined;
@@ -108,7 +108,7 @@ export function useProductsStorage() {
       }
     }
     return updatedProduct;
-  }, [addNotification]);
+  }, [createLowStockNotification]);
 
   const getProducts = useCallback((): Product[] => {
     return products;
