@@ -60,10 +60,14 @@ export function ProductsTable({ products, onEditProduct }: ProductsTableProps) {
               </TableCell>
               <TableCell className="rtl:text-right">{productTypeLabels[product.type]}</TableCell>
               <TableCell className="text-center">
-                {product.wholesalePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
+                {typeof product.wholesalePrice === 'number' 
+                  ? product.wholesalePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+                  : '0.00'} د.ج
               </TableCell>
               <TableCell className="text-center">
-                {product.retailPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
+                {typeof product.retailPrice === 'number' 
+                  ? product.retailPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+                  : '0.00'} د.ج
               </TableCell>
               <TableCell className={cn(
                   "text-center",

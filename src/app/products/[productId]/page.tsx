@@ -168,11 +168,19 @@ export default function ProductDetailPage() {
               </div>
               <div>
                 <p className="text-muted-foreground">سعر الجملة</p>
-                <p className="font-medium">{product.wholesalePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج / {unitSuffix[product.type]}</p>
+                <p className="font-medium">
+                  {typeof product.wholesalePrice === 'number' 
+                    ? product.wholesalePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+                    : '0.00'} د.ج / {unitSuffix[product.type]}
+                </p>
               </div>
               <div>
                 <p className="text-muted-foreground">سعر البيع (التجزئة)</p>
-                <p className="font-medium">{product.retailPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج / {unitSuffix[product.type]}</p>
+                <p className="font-medium">
+                  {typeof product.retailPrice === 'number' 
+                    ? product.retailPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+                    : '0.00'} د.ج / {unitSuffix[product.type]}
+                </p>
               </div>
               <div>
                 <p className="text-muted-foreground">الكمية في المخزون</p>
