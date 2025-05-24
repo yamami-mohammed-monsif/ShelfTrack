@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -8,8 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import { BarChart, CartesianGrid, XAxis, YAxis, Bar, ResponsiveContainer, TooltipProps, LegendProps } from 'recharts';
 import type { SalesTimeframe, SalesDataPoint, Product, Sale } from '@/lib/types';
-import { DollarSign, TrendingUp, CalendarDays, Package, ShoppingCart, TrendingDown, List } from 'lucide-react';
+import { DollarSign, TrendingUp, CalendarDays, Package, ShoppingCart, AlertTriangle, List } from 'lucide-react';
 import { useSalesStorage } from '@/hooks/use-sales-storage';
+import { isLowStock } from '@/lib/product-utils'; 
 import {
   format,
   startOfDay, endOfDay,
@@ -37,11 +37,11 @@ interface SalesDashboardProps {
 const chartConfig = {
   revenue: {
     label: "الإيرادات",
-    color: "hsl(var(--chart-2))", // Muted Sage (originally profit)
+    color: "hsl(var(--chart-2))", 
   },
   costs: {
-    label: "التكاليف (مبدئيًا)", // Placeholder for costs
-    color: "hsl(var(--destructive))", // Destructive (Red) (originally loss)
+    label: "التكاليف (مبدئيًا)", 
+    color: "hsl(var(--destructive))", 
   },
 };
 
@@ -110,8 +110,8 @@ const calculateAggregatedSales = (
         const totalRevenue = dailySales.reduce((sum, s) => sum + s.totalSaleAmount, 0);
         dataPoints.push({
           date: format(targetDate, 'EEE d MMM', { locale }),
-          profit: totalRevenue, // 'profit' field used for revenue
-          loss: 0, // 'loss' field used for costs, 0 for now
+          profit: totalRevenue, 
+          loss: 0, 
         });
       }
       break;
@@ -202,43 +202,35 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
 
   const now = useMemo(() => new Date(), []);
 
-  const totalProducts = products.length;
-  const totalStockQuantity = products.reduce((sum, p) => sum + p.quantity, 0);
+  const dailyAndWeeklyStats = useMemo(() => {
+    if (!isSalesLoaded) return {
+      todaySalesValue: 0, todayUnitsSold: 0,
+      thisWeekSalesValue: 0, thisWeekUnitsSold: 0
+    };
 
-  const monthlyStats = useMemo(() => {
-    if (!isSalesLoaded) return { currentMonthRevenue: 0, currentMonthSalesCount: 0, prevMonthRevenue: 0, prevMonthSalesCount: 0 };
+    const todayStart = startOfDay(now);
+    const todayEnd = endOfDay(now);
+    const weekStart = startOfWeek(now, { locale: arSA });
+    const weekEnd = endOfWeek(now, { locale: arSA });
 
-    const currentMonthStart = startOfMonth(now);
-    const currentMonthEnd = endOfMonth(now);
-    const prevMonthStart = startOfMonth(subMonths(now, 1));
-    const prevMonthEnd = endOfMonth(prevMonthStart);
-
-    const currentMonthSales = sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: currentMonthStart, end: currentMonthEnd }));
-    const prevMonthSales = sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: prevMonthStart, end: prevMonthEnd }));
+    const salesToday = sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: todayStart, end: todayEnd }));
+    const salesThisWeek = sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: weekStart, end: weekEnd }));
 
     return {
-      currentMonthRevenue: currentMonthSales.reduce((sum, s) => sum + s.totalSaleAmount, 0),
-      currentMonthSalesCount: currentMonthSales.length,
-      prevMonthRevenue: prevMonthSales.reduce((sum, s) => sum + s.totalSaleAmount, 0),
-      prevMonthSalesCount: prevMonthSales.length,
+      todaySalesValue: salesToday.reduce((sum, s) => sum + s.totalSaleAmount, 0),
+      todayUnitsSold: salesToday.reduce((sum, s) => sum + s.quantitySold, 0),
+      thisWeekSalesValue: salesThisWeek.reduce((sum, s) => sum + s.totalSaleAmount, 0),
+      thisWeekUnitsSold: salesThisWeek.reduce((sum, s) => sum + s.quantitySold, 0),
     };
   }, [sales, isSalesLoaded, now]);
   
+  const totalProductsInStock = products.length;
+  const lowStockProductsCount = useMemo(() => products.filter(p => isLowStock(p)).length, [products]);
+
   const dataForTimeframe = useMemo(() => {
     if (!isSalesLoaded) return [];
     return calculateAggregatedSales(sales, currentTimeframe, now);
   }, [sales, currentTimeframe, isSalesLoaded, now]);
-
-  const getPercentageChange = (current: number, previous: number): string => {
-    if (previous === 0) {
-      return current > 0 ? '+∞%' : 'N/A'; // Or handle as new
-    }
-    const change = ((current - previous) / previous) * 100;
-    return `${change >= 0 ? '+' : ''}${change.toFixed(0)}%`;
-  };
-  
-  const revenueChangeText = getPercentageChange(monthlyStats.currentMonthRevenue, monthlyStats.prevMonthRevenue);
-  const salesCountChangeText = getPercentageChange(monthlyStats.currentMonthSalesCount, monthlyStats.prevMonthSalesCount);
 
 
   if (!isSalesLoaded || !products) {
@@ -251,29 +243,45 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className="grid gap-6 grid-cols-2 md:grid-cols-3 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي الإيرادات (هذا الشهر)</CardTitle>
+            <CardTitle className="text-sm font-medium">مبيعات اليوم</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{monthlyStats.currentMonthRevenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} د.ج</div>
-            <p className="text-xs text-muted-foreground">
-              {revenueChangeText !== 'N/A' && revenueChangeText !== '+∞%' ? `${revenueChangeText} عن الشهر الماضي` : (revenueChangeText === '+∞%' && monthlyStats.currentMonthRevenue > 0 ? 'إيرادات جديدة هذا الشهر' : 'لا توجد بيانات للمقارنة')}
-            </p>
+            <div className="text-2xl font-bold">{dailyAndWeeklyStats.todaySalesValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} د.ج</div>
+            <p className="text-xs text-muted-foreground">إجمالي قيمة المبيعات لليوم الحالي</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">عدد المبيعات (هذا الشهر)</CardTitle>
+            <CardTitle className="text-sm font-medium">الوحدات المباعة اليوم</CardTitle>
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{monthlyStats.currentMonthSalesCount.toLocaleString()}</div>
-             <p className="text-xs text-muted-foreground">
-              {salesCountChangeText !== 'N/A' && salesCountChangeText !== '+∞%' ? `${salesCountChangeText} عن الشهر الماضي` : (salesCountChangeText === '+∞%' && monthlyStats.currentMonthSalesCount > 0 ? 'مبيعات جديدة هذا الشهر' : 'لا توجد بيانات للمقارنة')}
-            </p>
+            <div className="text-2xl font-bold">{dailyAndWeeklyStats.todayUnitsSold.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">إجمالي عدد الوحدات المباعة اليوم</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">مبيعات هذا الأسبوع</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{dailyAndWeeklyStats.thisWeekSalesValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} د.ج</div>
+            <p className="text-xs text-muted-foreground">إجمالي قيمة المبيعات لهذا الأسبوع</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">الوحدات المباعة هذا الأسبوع</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{dailyAndWeeklyStats.thisWeekUnitsSold.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">إجمالي عدد الوحدات المباعة هذا الأسبوع</p>
           </CardContent>
         </Card>
         <Card>
@@ -282,18 +290,18 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalProducts}</div>
+            <div className="text-2xl font-bold">{totalProductsInStock}</div>
             <p className="text-xs text-muted-foreground">إجمالي الأنواع المتوفرة في المخزون</p>
           </CardContent>
         </Card>
          <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">الكمية الإجمالية بالمخزون</CardTitle>
-            <List className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">منتجات منخفضة المخزون</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalStockQuantity.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">إجمالي الوحدات من كل المنتجات</p>
+            <div className="text-2xl font-bold">{lowStockProductsCount}</div>
+            <p className="text-xs text-muted-foreground">عدد المنتجات التي مخزونها منخفض</p>
           </CardContent>
         </Card>
       </div>
