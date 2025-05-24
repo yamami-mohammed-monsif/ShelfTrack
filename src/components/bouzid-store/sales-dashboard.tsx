@@ -7,12 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { SalesTable } from '@/components/bouzid-store/sales-table';
 import type { Product, Sale } from '@/lib/types';
-import { DollarSign, ShoppingCart, Package, AlertTriangle, List, ArrowLeft } from 'lucide-react';
+import { DollarSign, ShoppingCart, Package, AlertTriangle, List, ArrowLeft, TrendingUp } from 'lucide-react';
 import { useSalesStorage } from '@/hooks/use-sales-storage';
 import { isLowStock } from '@/lib/product-utils';
 import {
   startOfDay, endOfDay,
-  startOfWeek, endOfWeek,
   isWithinInterval,
 } from 'date-fns';
 import { arSA } from 'date-fns/locale';
@@ -26,23 +25,26 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
   
   const now = useMemo(() => new Date(), []);
 
-  const dailyAndWeeklyStats = useMemo(() => {
+  const dailyStats = useMemo(() => {
     if (!isSalesLoaded) return {
       todaySalesValue: 0,
-      thisWeekSalesValue: 0,
+      todayProfit: 0,
     };
 
     const todayStart = startOfDay(now);
     const todayEnd = endOfDay(now);
-    const weekStart = startOfWeek(now, { locale: arSA });
-    const weekEnd = endOfWeek(now, { locale: arSA });
-
+    
     const salesToday = sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: todayStart, end: todayEnd }));
-    const salesThisWeek = sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: weekStart, end: weekEnd }));
+
+    const todaySalesValue = salesToday.reduce((sum, s) => sum + s.totalSaleAmount, 0);
+    const todayProfit = salesToday.reduce((sum, s) => {
+      const profitPerSale = (s.retailPricePerUnitSnapshot - s.wholesalePricePerUnitSnapshot) * s.quantitySold;
+      return sum + (Number.isNaN(profitPerSale) ? 0 : profitPerSale);
+    }, 0);
 
     return {
-      todaySalesValue: salesToday.reduce((sum, s) => sum + s.totalSaleAmount, 0),
-      thisWeekSalesValue: salesThisWeek.reduce((sum, s) => sum + s.totalSaleAmount, 0),
+      todaySalesValue,
+      todayProfit,
     };
   }, [sales, isSalesLoaded, now]);
 
@@ -72,19 +74,19 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dailyAndWeeklyStats.todaySalesValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} د.ج</div>
+            <div className="text-2xl font-bold">{dailyStats.todaySalesValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} د.ج</div>
             <p className="text-xs text-muted-foreground">إجمالي قيمة المبيعات لليوم الحالي</p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">مبيعات هذا الأسبوع</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">أرباح اليوم</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dailyAndWeeklyStats.thisWeekSalesValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} د.ج</div>
-            <p className="text-xs text-muted-foreground">إجمالي قيمة المبيعات لهذا الأسبوع</p>
+            <div className="text-2xl font-bold">{dailyStats.todayProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} د.ج</div>
+            <p className="text-xs text-muted-foreground">إجمالي الأرباح المحققة اليوم</p>
           </CardContent>
         </Card>
         
