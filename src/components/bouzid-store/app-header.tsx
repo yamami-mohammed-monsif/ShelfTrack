@@ -78,26 +78,23 @@ export function AppHeader() {
                         <Link
                           key={notification.id}
                           href={notification.href || '#'}
-                          passHref
-                          legacyBehavior={!notification.href}
-                        >
-                          <a className={cn(
+                          className={cn(
                             "block p-3 hover:bg-muted/50",
                             !notification.href && "pointer-events-none" 
+                          )}
+                        >
+                          <p className={cn(
+                              "text-sm font-medium",
+                              !notification.read ? "text-foreground" : "text-muted-foreground"
                           )}>
-                            <p className={cn(
-                                "text-sm font-medium",
-                                !notification.read ? "text-foreground" : "text-muted-foreground"
-                            )}>
-                              {notification.message}
-                            </p>
-                            <p className={cn(
-                                "text-xs",
-                                !notification.read ? "text-primary" : "text-muted-foreground/80"
-                            )}>
-                              {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true, locale: arSA })}
-                            </p>
-                          </a>
+                            {notification.message}
+                          </p>
+                          <p className={cn(
+                              "text-xs",
+                              !notification.read ? "text-primary" : "text-muted-foreground/80"
+                          )}>
+                            {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true, locale: arSA })}
+                          </p>
                         </Link>
                       ))}
                     </div>
