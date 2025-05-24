@@ -12,7 +12,7 @@ import {
   TableRow,
   TableCaption,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,12 +22,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
+  // AlertDialogTrigger, // No longer needed here for the button in the row
 } from "@/components/ui/alert-dialog";
 import type { Product } from '@/lib/types';
 import { productTypeLabels, unitSuffix, isLowStock } from '@/lib/product-utils';
 import { format } from 'date-fns';
-import { arSA } from 'date-fns/locale'; 
+import { arSA } from 'date-fns/locale';
 import { Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -43,7 +43,7 @@ export function ProductsTable({ products, onEditProduct, onDeleteProduct }: Prod
   const handleConfirmDelete = () => {
     if (productToDelete) {
       onDeleteProduct(productToDelete);
-      setProductToDelete(null); 
+      setProductToDelete(null);
     }
   };
 
@@ -82,13 +82,13 @@ export function ProductsTable({ products, onEditProduct, onDeleteProduct }: Prod
                 </TableCell>
                 <TableCell className="rtl:text-right">{productTypeLabels[product.type]}</TableCell>
                 <TableCell className="text-center">
-                  {typeof product.wholesalePrice === 'number' 
-                    ? product.wholesalePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+                  {typeof product.wholesalePrice === 'number'
+                    ? product.wholesalePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                     : '0.00'} د.ج
                 </TableCell>
                 <TableCell className="text-center">
-                  {typeof product.retailPrice === 'number' 
-                    ? product.retailPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+                  {typeof product.retailPrice === 'number'
+                    ? product.retailPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                     : '0.00'} د.ج
                 </TableCell>
                 <TableCell className={cn(
@@ -104,11 +104,10 @@ export function ProductsTable({ products, onEditProduct, onDeleteProduct }: Prod
                   <Button variant="outline" size="icon" onClick={() => onEditProduct(product)} aria-label="تعديل المنتج">
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="icon" onClick={() => setProductToDelete(product)} aria-label="حذف المنتج" className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/50">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
+                  {/* Removed AlertDialogTrigger wrapper. The button's onClick now directly controls the dialog state. */}
+                  <Button variant="outline" size="icon" onClick={() => setProductToDelete(product)} aria-label="حذف المنتج" className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/50">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
