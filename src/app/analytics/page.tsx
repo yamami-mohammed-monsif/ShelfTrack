@@ -19,6 +19,9 @@ import {
   endOfWeek,
   startOfMonth,
   endOfMonth,
+  startOfHour,
+  endOfHour,
+  eachHourOfInterval,
   subDays,
   subWeeks,
   subMonths,
@@ -38,7 +41,7 @@ interface SalesAnalyticsChartDataPoint {
 }
 
 const timeframeLabels: Record<SalesAnalyticsTimeframe, string> = {
-  daily: 'يومي (آخر 30 يومًا)',
+  daily: 'يومي (اليوم بالساعة)',
   weekly: 'أسبوعي (آخر 12 أسبوعًا)',
   monthly: 'شهري (آخر 12 شهرًا)',
   '3months': 'آخر 3 أشهر (أسبوعي)',
@@ -74,17 +77,18 @@ export default function SalesAnalyticsPage() {
 
     switch (activeTimeframe) {
       case 'daily': {
-        const startDate = startOfDay(subDays(now, 29));
-        const endDate = endOfDay(now);
-        const days = eachDayOfInterval({ start: startDate, end: endDate });
-        aggregatedData = days.map(day => {
-          const dayStart = startOfDay(day);
-          const dayEnd = endOfDay(day);
-          const daySales = sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: dayStart, end: dayEnd }));
+        const todayStart = startOfDay(now);
+        const todayEnd = endOfDay(now);
+        const hoursToday = eachHourOfInterval({ start: todayStart, end: todayEnd });
+
+        aggregatedData = hoursToday.map(hour => {
+          const hourStart = startOfHour(hour);
+          const hourEnd = endOfHour(hour);
+          const hourSales = sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: hourStart, end: hourEnd }));
           return {
-            dateLabel: format(day, 'MMM d', { locale: arSA }),
-            tooltipLabel: format(day, 'eeee, MMM d, yyyy', { locale: arSA }),
-            totalSales: daySales.reduce((sum, s) => sum + s.totalSaleAmount, 0),
+            dateLabel: format(hour, 'HH:00', { locale: arSA }),
+            tooltipLabel: `الساعة: ${format(hour, 'HH:00', { locale: arSA })} - ${format(hourEnd, 'HH:59', { locale: arSA })}`,
+            totalSales: hourSales.reduce((sum, s) => sum + s.totalSaleAmount, 0),
           };
         });
         break;
@@ -192,7 +196,7 @@ export default function SalesAnalyticsPage() {
               ))}
             </div>
 
-            {chartData.length > 0 ? (
+            {chartData.length > 0 && chartData.some(d => d.totalSales > 0) ? (
               <div className="h-[400px] w-full">
                 <ChartContainer config={chartConfig} className="w-full h-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -253,6 +257,7 @@ export default function SalesAnalyticsPage() {
               <div className="text-center py-10 text-muted-foreground">
                 <CalendarDays className="mx-auto h-12 w-12 mb-4" />
                 <p>لا توجد بيانات مبيعات لعرضها لهذه الفترة الزمنية.</p>
+                 {activeTimeframe === 'daily' && <p>لا توجد مبيعات مسجلة لهذا اليوم حتى الآن.</p>}
               </div>
             )}
           </CardContent>
