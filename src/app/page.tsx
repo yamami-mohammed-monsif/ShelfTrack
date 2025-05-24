@@ -66,7 +66,7 @@ export default function BouzidStorePage() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <AppHeader />
-      <main className="flex-grow pb-28"> {/* Add padding-bottom to avoid overlap with fixed button */}
+      <main className="flex-grow pb-28"> {/* Add padding-bottom to avoid overlap with fixed footer buttons */}
         <SalesDashboard products={products} />
       </main>
       

@@ -1,15 +1,19 @@
+
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { SalesTable } from '@/components/bouzid-store/sales-table';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import { BarChart, CartesianGrid, XAxis, YAxis, Bar, ResponsiveContainer, TooltipProps, LegendProps } from 'recharts';
 import type { SalesTimeframe, SalesDataPoint, Product, Sale } from '@/lib/types';
-import { DollarSign, TrendingUp, CalendarDays, Package, ShoppingCart, AlertTriangle, List } from 'lucide-react';
+import { DollarSign, TrendingUp, CalendarDays, Package, ShoppingCart, AlertTriangle, List, ArrowLeft } from 'lucide-react';
 import { useSalesStorage } from '@/hooks/use-sales-storage';
-import { isLowStock } from '@/lib/product-utils'; 
+import { isLowStock } from '@/lib/product-utils';
 import {
   format,
   startOfDay, endOfDay,
@@ -19,14 +23,6 @@ import {
   startOfYear, endOfYear,
   subDays, subWeeks, subMonths, subQuarters, subYears,
   isWithinInterval,
-  eachDayOfInterval,
-  addDays,
-  differenceInCalendarDays,
-  differenceInCalendarWeeks,
-  differenceInCalendarMonths,
-  differenceInCalendarQuarters,
-  differenceInCalendarYears,
-  parseISO,
 } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 
@@ -37,11 +33,11 @@ interface SalesDashboardProps {
 const chartConfig = {
   revenue: {
     label: "الإيرادات",
-    color: "hsl(var(--chart-2))", 
+    color: "hsl(var(--chart-2))",
   },
   costs: {
-    label: "التكاليف (مبدئيًا)", 
-    color: "hsl(var(--destructive))", 
+    label: "التكاليف (مبدئيًا)",
+    color: "hsl(var(--destructive))",
   },
 };
 
@@ -110,8 +106,8 @@ const calculateAggregatedSales = (
         const totalRevenue = dailySales.reduce((sum, s) => sum + s.totalSaleAmount, 0);
         dataPoints.push({
           date: format(targetDate, 'EEE d MMM', { locale }),
-          profit: totalRevenue, 
-          loss: 0, 
+          profit: totalRevenue,
+          loss: 0,
         });
       }
       break;
@@ -157,13 +153,15 @@ const calculateAggregatedSales = (
     case 'half_yearly': // Last 2 half-years (approx)
         const currentHalfStart = (now.getMonth() < 6) ? startOfYear(now) : startOfMonth(subMonths(now, now.getMonth() - 6));
         const previousHalfStart = subMonths(currentHalfStart, 6);
-        
+
         const periods = [
-            {label: `النصف الثاني ${format(previousHalfStart, 'yyyy', { locale })}`, start: previousHalfStart, end: endOfMonth(addDays(subMonths(previousHalfStart,1),5*30+29)) }, // Approx
-            {label: `النصف الأول ${format(currentHalfStart, 'yyyy', { locale })}`, start: currentHalfStart, end: endOfMonth(addDays(subMonths(currentHalfStart,1),5*30+29)) } // Approx
+            {label: `النصف الثاني ${format(previousHalfStart, 'yyyy', { locale })}`, start: previousHalfStart, end: endOfMonth(subMonths(currentHalfStart,1)) },
+            {label: `النصف الأول ${format(currentHalfStart, 'yyyy', { locale })}`, start: currentHalfStart, end: endOfMonth(addMonths(currentHalfStart, 5)) }
         ];
         if (now.getMonth() >=6 ) {
              periods[0].label = `النصف الأول ${format(currentHalfStart, 'yyyy', { locale })}`;
+             periods[0].start = startOfYear(now);
+             periods[0].end = endOfMonth(addMonths(startOfYear(now),5));
              periods[1].label = `النصف الثاني ${format(currentHalfStart, 'yyyy', { locale })}`;
              periods[1].start = startOfMonth(addMonths(startOfYear(now),6));
              periods[1].end = endOfYear(now);
@@ -223,7 +221,7 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
       thisWeekUnitsSold: salesThisWeek.reduce((sum, s) => sum + s.quantitySold, 0),
     };
   }, [sales, isSalesLoaded, now]);
-  
+
   const totalProductsInStock = products.length;
   const lowStockProductsCount = useMemo(() => products.filter(p => isLowStock(p)).length, [products]);
 
@@ -231,6 +229,11 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
     if (!isSalesLoaded) return [];
     return calculateAggregatedSales(sales, currentTimeframe, now);
   }, [sales, currentTimeframe, isSalesLoaded, now]);
+
+  const recentSales = useMemo(() => {
+    if (!isSalesLoaded) return [];
+    return sales.sort((a, b) => b.saleTimestamp - a.saleTimestamp).slice(0, 5);
+  }, [sales, isSalesLoaded]);
 
 
   if (!isSalesLoaded || !products) {
@@ -242,8 +245,8 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="grid gap-6 grid-cols-2 md:grid-cols-3 mb-8">
+    <div className="container mx-auto py-8 px-4 space-y-8">
+      <div className="grid gap-6 grid-cols-2 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">مبيعات اليوم</CardTitle>
@@ -306,6 +309,29 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
         </Card>
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <List className="me-2 h-5 w-5 text-primary" />
+            أحدث عمليات البيع
+          </CardTitle>
+          <CardDescription>
+            آخر 5 عمليات بيع تم تسجيلها.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0 md:p-4">
+          <SalesTable sales={recentSales} />
+        </CardContent>
+        <div className="p-4 pt-2 text-center">
+          <Button asChild variant="link" className="text-primary">
+            <Link href="/sales">
+              عرض كل سجل المبيعات
+              <ArrowLeft className="ms-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      </Card>
+
       <Tabs defaultValue="daily" className="w-full" onValueChange={(value) => setCurrentTimeframe(value as SalesTimeframe)}>
         <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 mb-6">
           <TabsTrigger value="daily">يومي</TabsTrigger>
@@ -342,19 +368,19 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={dataForTimeframe} margin={{ top: 5, right: 0, left: 0, bottom: 5 }}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                          <XAxis 
-                            dataKey="date" 
-                            tickLine={false} 
-                            axisLine={false} 
+                          <XAxis
+                            dataKey="date"
+                            tickLine={false}
+                            axisLine={false}
                             tickMargin={8}
                             tickFormatter={(value) => value.length > 15 ? `${value.substring(0,15)}...` : value}
                           />
-                          <YAxis 
+                          <YAxis
                             tickFormatter={(value) => `${value.toLocaleString()} د.ج`}
                             tickLine={false}
                             axisLine={false}
                             tickMargin={8}
-                            width={80} 
+                            width={80}
                           />
                           <ChartTooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted))" }} />
                           <ChartLegend content={<CustomLegend />} />
@@ -402,4 +428,3 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
     </div>
   );
 }
-
