@@ -56,6 +56,15 @@ export default function ProductsListPage() {
     handleCloseEditModal();
   };
 
+  const productCounts = useMemo(() => {
+    return {
+      all: products.length,
+      powder: products.filter(p => p.type === 'powder').length,
+      liquid: products.filter(p => p.type === 'liquid').length,
+      unit: products.filter(p => p.type === 'unit').length,
+    };
+  }, [products]);
+
   const filteredProducts = useMemo(() => {
     if (activeFilter === 'all') {
       return products;
@@ -87,7 +96,7 @@ export default function ProductsListPage() {
             <CardDescription>عرض جميع المنتجات الموجودة في المخزون وتفاصيلها. قم بالتصفية حسب النوع.</CardDescription>
           </CardHeader>
           <CardContent className="p-4">
-            <div className="flex items-center space-x-2 rtl:space-x-reverse mb-4 pb-4 border-b">
+            <div className="flex items-center space-x-2 rtl:space-x-reverse mb-4 pb-4 border-b flex-wrap">
               <Filter className="h-5 w-5 text-muted-foreground" />
               <span className="text-sm font-medium text-muted-foreground">تصفية حسب النوع:</span>
               {(Object.keys(filterLabels) as ProductFilter[]).map((filterKey) => (
@@ -96,9 +105,9 @@ export default function ProductsListPage() {
                   variant={activeFilter === filterKey ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setActiveFilter(filterKey)}
-                  className="px-3 py-1 h-auto"
+                  className="px-3 py-1 h-auto m-1" // Added margin for better spacing on wrap
                 >
-                  {filterLabels[filterKey]}
+                  {filterLabels[filterKey]} ({productCounts[filterKey]})
                 </Button>
               ))}
             </div>
