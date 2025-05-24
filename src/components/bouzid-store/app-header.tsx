@@ -3,12 +3,12 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Button, buttonVariants } from '@/components/ui/button'; // Added buttonVariants import
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Home, Archive, Menu, ClipboardList, Bell, RotateCcw } from 'lucide-react';
+import { Home, Archive, Menu, ClipboardList, Bell, RotateCcw, LineChart as LineChartIcon } from 'lucide-react';
 import { useNotificationsStorage } from '@/hooks/use-notifications-storage';
 import { useProductsStorage } from '@/hooks/use-products-storage';
 import { useSalesStorage } from '@/hooks/use-sales-storage';
@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import type { Notification } from '@/lib/types';
 
 export function AppHeader() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearAllNotifications, isLoaded: notificationsLoaded } = useNotificationsStorage();
@@ -66,6 +67,12 @@ export function AppHeader() {
               <Link href="/sales">
                 <ClipboardList className="me-1 sm:me-2 h-5 w-5" />
                 سجل المبيعات
+              </Link>
+            </Button>
+            <Button asChild variant="ghost" className="text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground px-2 sm:px-3 py-2">
+              <Link href="/analytics">
+                <LineChartIcon className="me-1 sm:me-2 h-5 w-5" />
+                تحليلات المبيعات
               </Link>
             </Button>
              <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
@@ -122,7 +129,7 @@ export function AppHeader() {
                     <p className="text-muted-foreground text-center p-4">لا توجد إشعارات.</p>
                   ) : (
                     <div className="divide-y divide-border">
-                      {notifications.map((notification) => (
+                      {notifications.map((notification: Notification) => (
                         <Link
                           key={notification.id}
                           href={notification.href || '#'}
@@ -196,6 +203,14 @@ export function AppHeader() {
                       </Link>
                     </Button>
                   </SheetClose>
+                  <SheetClose asChild>
+                    <Button asChild variant="ghost" className="justify-start text-lg text-foreground hover:bg-accent hover:text-accent-foreground w-full">
+                      <Link href="/analytics">
+                        <LineChartIcon className="me-3 h-5 w-5" />
+                        تحليلات المبيعات
+                      </Link>
+                    </Button>
+                  </SheetClose>
                   <div className="pt-4 mt-4 border-t border-border">
                      <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
                         <AlertDialogTrigger asChild>
@@ -218,4 +233,3 @@ export function AppHeader() {
     </header>
   );
 }
-
