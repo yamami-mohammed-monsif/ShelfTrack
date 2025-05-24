@@ -106,7 +106,7 @@ export function AppHeader() {
                   <span className="sr-only">فتح الإشعارات</span>
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-80 p-0 bg-card text-card-foreground" align="end">
+              <PopoverContent className="w-96 p-0 bg-card text-card-foreground" align="end">
                 <div className="p-4 border-b border-border">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold">الإشعارات</h3>
