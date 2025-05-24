@@ -3,7 +3,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Home, Archive, Menu } from 'lucide-react';
+import { Home, Archive, Menu, ClipboardList } from 'lucide-react';
 
 export function AppHeader() {
   return (
@@ -25,6 +25,12 @@ export function AppHeader() {
             <Link href="/products">
               <Archive className="me-1 sm:me-2 h-5 w-5" />
               المخزون
+            </Link>
+          </Button>
+          <Button asChild variant="ghost" className="text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground px-2 sm:px-3 py-2">
+            <Link href="/sales">
+              <ClipboardList className="me-1 sm:me-2 h-5 w-5" />
+              سجل المبيعات
             </Link>
           </Button>
         </nav>
@@ -62,6 +68,14 @@ export function AppHeader() {
                     </Link>
                   </Button>
                 </SheetClose>
+                <SheetClose asChild>
+                  <Button asChild variant="ghost" className="justify-start text-lg text-foreground hover:bg-accent hover:text-accent-foreground w-full">
+                    <Link href="/sales">
+                      <ClipboardList className="me-3 h-5 w-5" />
+                      سجل المبيعات
+                    </Link>
+                  </Button>
+                </SheetClose>
               </div>
             </SheetContent>
           </Sheet>
@@ -70,4 +84,3 @@ export function AppHeader() {
     </header>
   );
 }
-

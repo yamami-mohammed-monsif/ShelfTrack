@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import type { Product, ProductFormData } from '@/lib/types';
 
@@ -57,9 +58,31 @@ export function useProductsStorage() {
     return editedProduct;
   }, []);
 
+  const decreaseProductQuantity = useCallback((productId: string, quantityToDecrease: number): Product | undefined => {
+    let updatedProduct: Product | undefined;
+    setProducts((prevProducts) =>
+      prevProducts.map((product) => {
+        if (product.id === productId) {
+          updatedProduct = {
+            ...product,
+            quantity: Math.max(0, product.quantity - quantityToDecrease), // Ensure quantity doesn't go below 0
+            timestamp: Date.now(),
+          };
+          return updatedProduct;
+        }
+        return product;
+      })
+    );
+    return updatedProduct;
+  }, []);
+
   const getProducts = useCallback((): Product[] => {
     return products;
   }, [products]);
+  
+  const getProductById = useCallback((productId: string): Product | undefined => {
+    return products.find(p => p.id === productId);
+  }, [products]);
 
-  return { products, addProduct, editProduct, getProducts, isLoaded };
+  return { products, addProduct, editProduct, getProducts, decreaseProductQuantity, getProductById, isLoaded };
 }
