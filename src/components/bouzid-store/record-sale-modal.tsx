@@ -1,11 +1,11 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ShoppingCart, CalendarClock, PackageSearch } from 'lucide-react';
+import { ShoppingCart, CalendarClock, PackageSearch, Check, ChevronsUpDown } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -17,14 +17,20 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui/label'; // Keep if used elsewhere, not directly by combobox
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Form,
   FormControl,
@@ -56,6 +62,9 @@ const saleFormSchema = z.object({
 
 export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: RecordSaleModalProps) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [comboboxOpen, setComboboxOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+
 
   const form = useForm<SaleFormData>({
     resolver: zodResolver(saleFormSchema),
@@ -74,20 +83,34 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
         saleTimestamp: new Date().toISOString().slice(0, 16),
       });
       setSelectedProduct(null);
+      setSearchValue("");
     }
   }, [isOpen, form]);
 
-  const handleProductChange = (productId: string) => {
-    const product = products.find((p) => p.id === productId);
-    setSelectedProduct(product || null);
-    form.setValue('productId', productId);
-    if (product && form.getValues('quantitySold') > product.quantity) {
-      form.setValue('quantitySold', product.quantity > 0 ? 1 : 0); // Reset or set to max available if invalid
+  const availableProducts = useMemo(() => products.filter(p => p.quantity > 0), [products]);
+
+  const filteredProducts = useMemo(() => {
+    if (!searchValue) return availableProducts;
+    return availableProducts.filter(product =>
+      product.name.toLowerCase().includes(searchValue.toLowerCase())
+    );
+  }, [availableProducts, searchValue]);
+
+
+  const handleProductSelect = (product: Product) => {
+    form.setValue('productId', product.id);
+    setSelectedProduct(product);
+    setSearchValue(product.name); // Update search value to reflect selection
+    setComboboxOpen(false);
+    if (form.getValues('quantitySold') > product.quantity) {
+      form.setValue('quantitySold', product.quantity > 0 ? 1 : 0);
     }
+     // Clear errors for productId if any
+    form.clearErrors('productId');
   };
 
   const onSubmit = (data: SaleFormData) => {
-    const product = products.find((p) => p.id === data.productId);
+    const product = products.find((p) => p.id === data.productId); // Use original products list for final validation
     if (!product) {
       form.setError('productId', { type: 'manual', message: 'المنتج المختار غير موجود.' });
       return;
@@ -106,7 +129,10 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) onClose();
+      setComboboxOpen(false); // Ensure combobox closes if dialog closes
+    }}>
       <DialogContent className="sm:max-w-md bg-card text-card-foreground">
         <DialogHeader>
           <DialogTitle className="text-center text-xl">تسجيل عملية بيع</DialogTitle>
@@ -120,28 +146,69 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
               control={form.control}
               name="productId"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel className="flex items-center">
                     <PackageSearch className="me-2 h-4 w-4 text-muted-foreground" />
                     المنتج
                   </FormLabel>
-                  <Select onValueChange={handleProductChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="اختر منتجاً..." />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {products.filter(p => p.quantity > 0).length === 0 && (
-                        <SelectItem value="no-products" disabled>لا توجد منتجات متوفرة للبيع</SelectItem>
-                      )}
-                      {products.filter(p => p.quantity > 0).map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name} (المتوفر: {product.quantity})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={comboboxOpen}
+                          className={cn(
+                            "w-full justify-between",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value
+                            ? availableProducts.find(
+                                (product) => product.id === field.value
+                              )?.name
+                            : "اختر منتجاً..."}
+                          <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-[250px] overflow-y-auto">
+                      <Command>
+                        <CommandInput 
+                          placeholder="ابحث عن منتج..."
+                          value={searchValue}
+                          onValueChange={setSearchValue}
+                        />
+                        <CommandList>
+                          <CommandEmpty>لم يتم العثور على منتج.</CommandEmpty>
+                          <CommandGroup>
+                            {filteredProducts.map((product) => (
+                              <CommandItem
+                                value={product.name} // Use product.name for cmdk filtering, actual value is product.id
+                                key={product.id}
+                                onSelect={() => handleProductSelect(product)}
+                              >
+                                <Check
+                                  className={cn(
+                                    "me-2 h-4 w-4",
+                                    product.id === field.value
+                                      ? "opacity-100"
+                                      : "opacity-0"
+                                  )}
+                                />
+                                {product.name} (المتوفر: {product.quantity})
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                           {availableProducts.length === 0 && !searchValue && (
+                             <CommandItem disabled className="text-center text-muted-foreground py-2">
+                                لا توجد منتجات متوفرة للبيع
+                             </CommandItem>
+                           )}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <FormMessage />
                 </FormItem>
               )}
@@ -195,7 +262,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
               <Button type="button" variant="outline" onClick={onClose}>
                 إلغاء
               </Button>
-              <Button type="submit" variant="default" disabled={!selectedProduct || products.filter(p => p.quantity > 0).length === 0}>
+              <Button type="submit" variant="default" disabled={!selectedProduct || availableProducts.length === 0}>
                 <ShoppingCart className="ms-2 h-4 w-4" />
                 تسجيل البيع
               </Button>
@@ -206,3 +273,4 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
     </Dialog>
   );
 }
+
