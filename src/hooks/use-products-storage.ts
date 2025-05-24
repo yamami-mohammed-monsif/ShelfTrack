@@ -1,9 +1,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import type { Product, ProductFormData, ProductType } from '@/lib/types';
+import type { Product, ProductFormData } from '@/lib/types';
 import { useNotificationsStorage } from './use-notifications-storage';
 import { isLowStock, wasLowStock, unitSuffix } from '@/lib/product-utils';
-
 
 const PRODUCTS_STORAGE_KEY = 'bouzid_store_products';
 
@@ -46,6 +45,9 @@ export function useProductsStorage() {
       timestamp: Date.now(),
     };
     setProducts((prevProducts) => [...prevProducts, newProduct]);
+    
+    // For newly added products, there's no "before" state of it being not low-stock.
+    // We just check if it's low-stock upon creation.
     if (isLowStock(newProduct)) {
       createLowStockNotification(newProduct);
     }
@@ -53,74 +55,74 @@ export function useProductsStorage() {
   }, [createLowStockNotification]);
 
   const editProduct = useCallback((productId: string, updatedData: ProductFormData): Product | undefined => {
-    const productBeforeUpdate = products.find(p => p.id === productId);
-    
-    if (!productBeforeUpdate) {
-      console.warn(`Product with ID ${productId} not found for editing.`);
-      return undefined;
-    }
+    let returnedProduct: Product | undefined;
 
-    let productAfterUpdateGlobal: Product | undefined;
+    setProducts((currentProducts) => {
+      const productBeforeUpdate = currentProducts.find(p => p.id === productId);
+      let productAfterUpdate: Product | undefined;
 
-    setProducts((prevProducts) => {
-      return prevProducts.map((product) => {
+      const newProducts = currentProducts.map((product) => {
         if (product.id === productId) {
           const updatedProductInstance = {
             ...product,
             ...updatedData,
             timestamp: Date.now(),
           };
-          productAfterUpdateGlobal = updatedProductInstance; // Capture the updated instance
+          productAfterUpdate = updatedProductInstance; // Capture the state after update
           return updatedProductInstance;
         }
         return product;
       });
+
+      // Perform check and notify from within the updater
+      if (productAfterUpdate && productBeforeUpdate) {
+        const wasPreviouslyLow = wasLowStock(productBeforeUpdate.type, productBeforeUpdate.quantity);
+        const isNowLow = isLowStock(productAfterUpdate);
+        if (isNowLow && !wasPreviouslyLow) {
+          createLowStockNotification(productAfterUpdate);
+        }
+      }
+      returnedProduct = productAfterUpdate; // Assign for return
+      return newProducts;
     });
     
-    if (productAfterUpdateGlobal) {
-      const wasPreviouslyLow = wasLowStock(productBeforeUpdate.type, productBeforeUpdate.quantity);
-      const isNowLow = isLowStock(productAfterUpdateGlobal);
-      if (isNowLow && !wasPreviouslyLow) {
-        createLowStockNotification(productAfterUpdateGlobal);
-      }
-    }
-    return productAfterUpdateGlobal;
-  }, [products, createLowStockNotification]);
+    return returnedProduct; // Returns the product state captured during this update cycle
+  }, [createLowStockNotification]);
 
   const decreaseProductQuantity = useCallback((productId: string, quantityToDecrease: number): Product | undefined => {
-    const productBeforeUpdate = products.find(p => p.id === productId);
+    let returnedProduct: Product | undefined;
 
-    if (!productBeforeUpdate) {
-      console.warn(`Product with ID ${productId} not found for decreasing quantity.`);
-      return undefined;
-    }
+    setProducts((currentProducts) => {
+      const productBeforeUpdate = currentProducts.find(p => p.id === productId);
+      let productAfterUpdate: Product | undefined;
 
-    let productAfterUpdateGlobal: Product | undefined;
-
-    setProducts((prevProducts) =>
-      prevProducts.map((product) => {
+      const newProducts = currentProducts.map((product) => {
         if (product.id === productId) {
           const updatedProductInstance = {
             ...product,
             quantity: Math.max(0, product.quantity - quantityToDecrease),
             timestamp: Date.now(),
           };
-          productAfterUpdateGlobal = updatedProductInstance; // Capture the updated instance
+          productAfterUpdate = updatedProductInstance; // Capture the state after update
           return updatedProductInstance;
         }
         return product;
-      })
-    );
+      });
 
-    if (productAfterUpdateGlobal) {
-      const wasPreviouslyLow = wasLowStock(productBeforeUpdate.type, productBeforeUpdate.quantity);
-      const isNowLow = isLowStock(productAfterUpdateGlobal);
-      if (isNowLow && !wasPreviouslyLow) {
-        createLowStockNotification(productAfterUpdateGlobal);
+      // Perform check and notify from within the updater
+      if (productAfterUpdate && productBeforeUpdate) {
+        const wasPreviouslyLow = wasLowStock(productBeforeUpdate.type, productBeforeUpdate.quantity);
+        const isNowLow = isLowStock(productAfterUpdate);
+        if (isNowLow && !wasPreviouslyLow) {
+          createLowStockNotification(productAfterUpdate);
+        }
       }
-    }
-    return productAfterUpdateGlobal;
-  }, [products, createLowStockNotification]);
+      returnedProduct = productAfterUpdate; // Assign for return
+      return newProducts;
+    });
+
+    return returnedProduct; // Returns the product state captured during this update cycle
+  }, [createLowStockNotification]);
 
   const getProducts = useCallback((): Product[] => {
     return products;
