@@ -51,7 +51,7 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
 
   const recentSales = useMemo(() => {
     if (!isSalesLoaded) return [];
-    return sales.sort((a, b) => b.saleTimestamp - a.timestamp).slice(0, 5);
+    return sales.sort((a, b) => b.saleTimestamp - a.saleTimestamp).slice(0, 5);
   }, [sales, isSalesLoaded]);
 
 
@@ -65,7 +65,7 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
 
   return (
     <div className="container mx-auto py-8 px-4 space-y-8">
-      <div className="grid gap-6 grid-cols-2 md:grid-cols-2"> {/* Adjusted grid columns */}
+      <div className="grid gap-6 grid-cols-2 md:grid-cols-2"> 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">مبيعات اليوم</CardTitle>
@@ -90,12 +90,12 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">عدد أنواع المنتجات</CardTitle>
+            <CardTitle className="text-sm font-medium">عدد المنتجات</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalProductsInStock}</div>
-            <p className="text-xs text-muted-foreground">إجمالي الأنواع المتوفرة في المخزون</p>
+            <p className="text-xs text-muted-foreground">إجمالي المنتجات المتوفرة في المخزون</p>
           </CardContent>
         </Card>
          <Card>
