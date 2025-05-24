@@ -6,6 +6,7 @@ export interface Product {
   name: string;
   type: ProductType;
   wholesalePrice: number; // This is the purchase price per unit
+  retailPrice: number;    // This is the selling price per unit
   quantity: number;
   timestamp: number; // Unix timestamp (milliseconds) of last update/creation
 }
@@ -14,6 +15,7 @@ export interface ProductFormData {
   name: string;
   type: ProductType;
   wholesalePrice: number;
+  retailPrice: number;
   quantity: number;
 }
 
@@ -22,8 +24,9 @@ export interface Sale {
   productId: string;
   productNameSnapshot: string; // Snapshot of product name at time of sale
   quantitySold: number;
-  salePricePerUnit: number; // Price per unit at which it was sold (snapshot of product.wholesalePrice at sale time)
-  totalSaleAmount: number;
+  wholesalePricePerUnitSnapshot: number; // Snapshot of product wholesale price at sale time
+  retailPricePerUnitSnapshot: number; // Snapshot of product retail price at sale time (this was salePricePerUnit)
+  totalSaleAmount: number; // Calculated based on retailPricePerUnitSnapshot * quantitySold
   saleTimestamp: number; // Unix timestamp (milliseconds)
 }
 

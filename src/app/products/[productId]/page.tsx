@@ -13,26 +13,16 @@ import type { Product, ProductFormData, Sale, ProductType } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, TooltipProps } from 'recharts';
-import { ChartContainer, ChartTooltipContent, ChartLegendContent } from '@/components/ui/chart'; // Using existing ShadCN chart components
+import { ChartContainer, ChartTooltipContent, ChartLegendContent } from '@/components/ui/chart';
 import { Package, Edit3, DollarSign, TrendingUp, ListOrdered, CalendarDays } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { arSA } from 'date-fns/locale';
+import { productTypeLabels, unitSuffix } from '@/lib/product-utils';
 
-const productTypeLabels: Record<ProductType, string> = {
-  powder: 'مسحوق',
-  liquid: 'سائل',
-  unit: 'وحدة',
-};
-
-const unitSuffix: Record<ProductType, string> = {
-  powder: 'كجم',
-  liquid: 'لتر',
-  unit: 'قطعة',
-};
 
 const CustomSalesTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
   if (active && payload && payload.length) {
-    const data = payload[0].payload; // Access the full data point
+    const data = payload[0].payload as any; 
     return (
       <div className="rounded-lg border bg-background p-2 shadow-sm">
         <div className="grid grid-cols-1 gap-1 text-right">
@@ -60,13 +50,10 @@ export default function ProductDetailPage() {
     getProductById, 
     editProduct, 
     isLoaded: productsLoaded,
-    // products, // Get all products to ensure up-to-date info after edit
   } = useProductsStorage();
   const { sales, isSalesLoaded } = useSalesStorage();
 
-  // Local state for the product to ensure immediate UI updates after edit
   const [product, setProduct] = useState<Product | null | undefined>(null);
-
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
@@ -74,7 +61,6 @@ export default function ProductDetailPage() {
       const fetchedProduct = getProductById(productId);
       setProduct(fetchedProduct);
       if (!fetchedProduct) {
-        // Optionally redirect or show a more prominent "not found" message
         console.warn("Product not found on initial load or ID change");
       }
     }
@@ -90,8 +76,8 @@ export default function ProductDetailPage() {
 
   const salesChartData = useMemo(() => {
     return productSales.map(sale => ({
-      originalDate: new Date(sale.saleTimestamp).toISOString(), // For tooltip original date
-      date: format(new Date(sale.saleTimestamp), 'MMM d', { locale: arSA }), // Formatted for X-axis
+      originalDate: new Date(sale.saleTimestamp).toISOString(),
+      date: format(new Date(sale.saleTimestamp), 'MMM d', { locale: arSA }), 
       quantitySold: sale.quantitySold,
     }));
   }, [productSales]);
@@ -116,7 +102,7 @@ export default function ProductDetailPage() {
   const handleSaveEditedProduct = (id: string, data: ProductFormData) => {
     const edited = editProduct(id, data);
     if (edited) {
-      setProduct(edited); // Update local state for immediate UI refresh
+      setProduct(edited); 
       toast({
         title: "نجاح",
         description: `تم تعديل المنتج "${edited.name}" بنجاح.`,
@@ -163,7 +149,6 @@ export default function ProductDetailPage() {
     <div className="flex flex-col min-h-screen bg-background">
       <AppHeader />
       <main className="flex-grow p-4 md:p-8 space-y-6">
-        {/* Product Details Card */}
         <Card className="shadow-lg rounded-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div className="flex items-center space-x-2 rtl:space-x-reverse">
@@ -186,6 +171,10 @@ export default function ProductDetailPage() {
                 <p className="font-medium">{product.wholesalePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج / {unitSuffix[product.type]}</p>
               </div>
               <div>
+                <p className="text-muted-foreground">سعر البيع (التجزئة)</p>
+                <p className="font-medium">{product.retailPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج / {unitSuffix[product.type]}</p>
+              </div>
+              <div>
                 <p className="text-muted-foreground">الكمية في المخزون</p>
                 <p className="font-medium">{product.quantity.toLocaleString()} {unitSuffix[product.type]}</p>
               </div>
@@ -197,7 +186,6 @@ export default function ProductDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Sales Chart Card */}
         <Card className="shadow-lg rounded-lg">
           <CardHeader>
              <div className="flex items-center space-x-2 rtl:space-x-reverse">
@@ -216,7 +204,7 @@ export default function ProductDetailPage() {
                       margin={{
                         top: 5,
                         right: 10,
-                        left: -20, // Adjusted for Y-axis labels
+                        left: -20, 
                         bottom: 5,
                       }}
                     >
@@ -226,7 +214,6 @@ export default function ProductDetailPage() {
                         tickLine={false}
                         axisLine={false}
                         tickMargin={8}
-                        // tickFormatter={(value) => format(parseISO(value), 'dd MMM', { locale: arSA })} // Re-format if needed
                       />
                       <YAxis
                         tickFormatter={(value) => value.toLocaleString()}
@@ -273,7 +260,6 @@ export default function ProductDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Sales History Table Card */}
         <Card className="shadow-lg rounded-lg">
           <CardHeader>
             <div className="flex items-center space-x-2 rtl:space-x-reverse">

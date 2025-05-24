@@ -44,6 +44,7 @@ export function ProductsTable({ products, onEditProduct }: ProductsTableProps) {
             <TableHead className="min-w-[150px] rtl:text-right">اسم المنتج</TableHead>
             <TableHead className="rtl:text-right">النوع</TableHead>
             <TableHead className="text-center">سعر الجملة</TableHead>
+            <TableHead className="text-center">سعر البيع</TableHead>
             <TableHead className="text-center">الكمية</TableHead>
             <TableHead className="text-left rtl:text-right min-w-[150px]">تاريخ الإضافة/التعديل</TableHead>
             <TableHead className="text-center">تعديل</TableHead>
@@ -60,6 +61,9 @@ export function ProductsTable({ products, onEditProduct }: ProductsTableProps) {
               <TableCell className="rtl:text-right">{productTypeLabels[product.type]}</TableCell>
               <TableCell className="text-center">
                 {product.wholesalePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
+              </TableCell>
+              <TableCell className="text-center">
+                {product.retailPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
               </TableCell>
               <TableCell className={cn(
                   "text-center",

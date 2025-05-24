@@ -42,8 +42,9 @@ export function useSalesStorage() {
       productId: productSold.id,
       productNameSnapshot: productSold.name,
       quantitySold,
-      salePricePerUnit: productSold.wholesalePrice, // Assuming selling at wholesale price for now
-      totalSaleAmount: productSold.wholesalePrice * quantitySold,
+      wholesalePricePerUnitSnapshot: productSold.wholesalePrice,
+      retailPricePerUnitSnapshot: productSold.retailPrice, 
+      totalSaleAmount: productSold.retailPrice * quantitySold, // Calculate total based on retail price
       saleTimestamp,
     };
     setSales((prevSales) => [...prevSales, newSale].sort((a, b) => b.saleTimestamp - a.saleTimestamp));

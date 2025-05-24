@@ -42,22 +42,35 @@ const createProductFormSchema = () => z.object({
   }),
   wholesalePrice: z.coerce
     .number({ 
-      required_error: "السعر مطلوب.",
-      invalid_type_error: "السعر يجب أن يكون رقماً صالحاً." 
+      required_error: "سعر الجملة مطلوب.",
+      invalid_type_error: "سعر الجملة يجب أن يكون رقماً صالحاً." 
     })
-    .positive({ message: 'السعر يجب أن يكون إيجابياً.' }),
+    .positive({ message: 'سعر الجملة يجب أن يكون إيجابياً.' }),
+  retailPrice: z.coerce
+    .number({ 
+      required_error: "سعر البيع مطلوب.",
+      invalid_type_error: "سعر البيع يجب أن يكون رقماً صالحاً." 
+    })
+    .positive({ message: 'سعر البيع يجب أن يكون إيجابياً.' }),
   quantity: z.coerce
     .number({ 
       required_error: "الكمية مطلوبة.",
       invalid_type_error: "الكمية يجب أن تكون رقماً صالحاً." 
     })
-    .positive({ message: 'الكمية يجب أن تكون إيجابية.' }),
+    .positive({ message: 'الكمية يجب أن تكون إيجابية.' }), // Changed from nonNegative to positive
 }).superRefine((values, ctx) => {
   if (values.type === 'unit' && values.quantity !== undefined && !Number.isInteger(values.quantity)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: 'كمية منتجات الوحدة يجب أن تكون رقماً صحيحاً.',
       path: ['quantity'],
+    });
+  }
+  if (values.wholesalePrice !== undefined && values.retailPrice !== undefined && values.retailPrice < values.wholesalePrice) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'سعر البيع يجب أن يكون مساوياً أو أكبر من سعر الجملة.',
+      path: ['retailPrice'],
     });
   }
 });
@@ -77,11 +90,13 @@ export function EditProductModal({ isOpen, onClose, onSaveEdit, productToEdit }:
         name: productToEdit.name,
         type: productToEdit.type,
         wholesalePrice: productToEdit.wholesalePrice,
+        retailPrice: productToEdit.retailPrice,
         quantity: productToEdit.quantity,
     } : {
       name: '',
       type: 'unit',
       wholesalePrice: undefined,
+      retailPrice: undefined,
       quantity: undefined,
     },
   });
@@ -92,6 +107,7 @@ export function EditProductModal({ isOpen, onClose, onSaveEdit, productToEdit }:
         name: productToEdit.name,
         type: productToEdit.type,
         wholesalePrice: productToEdit.wholesalePrice,
+        retailPrice: productToEdit.retailPrice,
         quantity: productToEdit.quantity,
       });
       setCurrentProductType(productToEdit.type);
@@ -100,6 +116,7 @@ export function EditProductModal({ isOpen, onClose, onSaveEdit, productToEdit }:
             name: '',
             type: 'unit',
             wholesalePrice: undefined,
+            retailPrice: undefined,
             quantity: undefined,
         });
         setCurrentProductType('unit');
@@ -202,6 +219,39 @@ export function EditProductModal({ isOpen, onClose, onSaveEdit, productToEdit }:
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>سعر الجملة ({selectedUnitLabels.price})</FormLabel>
+                    <FormControl>
+                       <Input 
+                        type="number" 
+                        step="0.01" 
+                        placeholder="0.00" 
+                        {...field} 
+                        value={field.value === undefined || Number.isNaN(Number(field.value)) ? "" : field.value}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          const valueAsString = e.target.value;
+                          if (valueAsString === "" || valueAsString === "-") {
+                            field.onChange(undefined);
+                          } else {
+                            const valueAsNum = e.target.valueAsNumber;
+                            if (Number.isNaN(valueAsNum)) {
+                              field.onChange(valueAsString);
+                            } else {
+                              field.onChange(valueAsNum);
+                            }
+                          }
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="retailPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>سعر البيع (التجزئة) ({selectedUnitLabels.price})</FormLabel>
                     <FormControl>
                        <Input 
                         type="number" 

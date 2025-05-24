@@ -37,7 +37,7 @@ export function SalesTable({ sales }: SalesTableProps) {
           <TableRow>
             <TableHead className="min-w-[150px] rtl:text-right">اسم المنتج</TableHead>
             <TableHead className="text-center">الكمية المباعة</TableHead>
-            <TableHead className="text-center">سعر الوحدة (عند البيع)</TableHead>
+            <TableHead className="text-center">سعر البيع (عند البيع)</TableHead>
             <TableHead className="text-center">المبلغ الإجمالي</TableHead>
             <TableHead className="text-left rtl:text-right min-w-[150px]">تاريخ البيع</TableHead>
           </TableRow>
@@ -48,7 +48,7 @@ export function SalesTable({ sales }: SalesTableProps) {
               <TableCell className="font-medium rtl:text-right">{sale.productNameSnapshot}</TableCell>
               <TableCell className="text-center">{sale.quantitySold.toLocaleString()}</TableCell>
               <TableCell className="text-center">
-                {sale.salePricePerUnit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
+                {sale.retailPricePerUnitSnapshot.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
               </TableCell>
               <TableCell className="text-center font-semibold">
                 {sale.totalSaleAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج

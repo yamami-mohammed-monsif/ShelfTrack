@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/form';
 import type { SaleFormData, Product } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { unitSuffix } from '@/lib/product-utils';
 
 interface RecordSaleModalProps {
   isOpen: boolean;
@@ -77,12 +78,11 @@ const createSaleFormSchema = (allProducts: Product[]) => z.object({
     return;
   }
   
-  // Ensure quantitySold is a number before checking isInteger or product.quantity
   if (typeof values.quantitySold !== 'number' || Number.isNaN(values.quantitySold)) {
      if (values.quantitySold !== undefined) { 
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "الكمية المباعة يجب أن تكون رقماً صالحاً.", // This specific message might be shadowed by invalid_type_error
+          message: "الكمية المباعة يجب أن تكون رقماً صالحاً.",
           path: ['quantitySold'],
         });
      }
@@ -128,9 +128,8 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
   });
   
   useEffect(() => {
-    // Re-initialize the resolver when products change to ensure the superRefine has the latest product list
     form.reset(form.getValues(), {
-       // @ts-ignore - Zod resolver type can be tricky with dynamic schemas but this pattern is common
+      // @ts-ignore 
       resolver: zodResolver(createSaleFormSchema(productsRef.current)),
     });
   }, [products, form]);
@@ -278,9 +277,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
 
             {selectedProduct && (
               <p className="text-sm text-muted-foreground">
-                سعر الوحدة: {selectedProduct.wholesalePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج / {
-                  selectedProduct.type === 'powder' ? 'كجم' : selectedProduct.type === 'liquid' ? 'لتر' : 'قطعة'
-                }
+                سعر البيع: {selectedProduct.retailPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج / {unitSuffix[selectedProduct.type]}
               </p>
             )}
 
@@ -337,7 +334,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
             
             {selectedProduct && form.watch("quantitySold") > 0 && !Number.isNaN(form.watch("quantitySold")) && (
               <div className="text-lg font-semibold text-center p-2 bg-muted rounded-md">
-                الإجمالي: {(selectedProduct.wholesalePrice * (form.watch("quantitySold") || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
+                الإجمالي: {(selectedProduct.retailPrice * (form.watch("quantitySold") || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
               </div>
             )}
 

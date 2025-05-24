@@ -40,7 +40,7 @@ export function useProductsStorage() {
 
   const addProduct = useCallback((productData: ProductFormData): Product => {
     const newProduct: Product = {
-      ...productData,
+      ...productData, // wholesalePrice and retailPrice are included here
       id: crypto.randomUUID(),
       timestamp: Date.now(),
     };
@@ -48,9 +48,8 @@ export function useProductsStorage() {
 
     setProducts((currentProducts) => {
       const updatedProducts = [...currentProducts, newProduct];
-      productToReturn = newProduct; // Capture for return
+      productToReturn = newProduct;
 
-      // For newly added products, check if it's low-stock upon creation.
       if (isLowStock(newProduct)) {
         createLowStockNotification(newProduct);
       }
@@ -70,7 +69,7 @@ export function useProductsStorage() {
         if (product.id === productId) {
           productAfterUpdate = {
             ...product,
-            ...updatedData,
+            ...updatedData, // wholesalePrice and retailPrice are updated here
             timestamp: Date.now(),
           };
           return productAfterUpdate;
