@@ -83,8 +83,10 @@ function dispatch(action: NotificationAction) {
       console.error("Failed to save notifications to localStorage:", error);
     }
   }
-  // Notify all listeners
-  listeners.forEach((listener) => listener(memoryState));
+  // Notify all listeners using queueMicrotask to defer execution
+  queueMicrotask(() => {
+    listeners.forEach((listener) => listener(memoryState));
+  });
 }
 // --- End of Module-level shared state and logic ---
 
