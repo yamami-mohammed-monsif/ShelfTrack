@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -17,7 +17,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label'; // Keep if used elsewhere, not directly by combobox
 import {
   Command,
   CommandEmpty,
@@ -49,31 +48,83 @@ interface RecordSaleModalProps {
   products: Product[];
 }
 
-const saleFormSchema = z.object({
+const createSaleFormSchema = (allProducts: Product[]) => z.object({
   productId: z.string().min(1, { message: 'الرجاء اختيار منتج.' }),
   quantitySold: z.coerce
-    .number({ invalid_type_error: 'الكمية يجب أن تكون رقماً.' })
-    .int({ message: 'الكمية يجب أن تكون رقماً صحيحاً.' })
+    .number({ 
+      invalid_type_error: 'الكمية يجب أن تكون رقماً.',
+      required_error: "الكمية المباعة مطلوبة." 
+    })
     .positive({ message: 'الكمية المباعة يجب أن تكون أكبر من صفر.' }),
-  saleTimestamp: z.string().refine(val => !isNaN(new Date(val).getTime()), {
+  saleTimestamp: z.string().refine(val => {
+    if (!val) return false; // Ensure value is not empty
+    const date = new Date(val);
+    return !isNaN(date.getTime());
+  }, {
     message: 'تاريخ ووقت البيع غير صالح.',
   }),
+}).superRefine((values, ctx) => {
+  if (!values.productId) return;
+
+  const product = allProducts.find(p => p.id === values.productId);
+
+  if (!product) {
+    // This case should ideally be handled by the combobox selection ensuring a valid product.
+    // If it still occurs, it indicates an issue with product selection logic.
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "المنتج المختار غير صالح.",
+      path: ['productId'],
+    });
+    return;
+  }
+
+  if (product.type === 'unit' && !Number.isInteger(values.quantitySold)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'كمية منتجات الوحدة يجب أن تكون رقماً صحيحاً.',
+      path: ['quantitySold'],
+    });
+  }
+  
+  if (values.quantitySold > product.quantity) {
+     ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `الكمية المتوفرة لـ "${product.name}" هي ${product.quantity.toLocaleString()} فقط.`,
+        path: ['quantitySold'],
+      });
+  }
 });
+
 
 export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: RecordSaleModalProps) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [comboboxOpen, setComboboxOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
 
+  // Ref to hold the latest products for Zod schema
+  const productsRef = useRef(products);
+  useEffect(() => {
+    productsRef.current = products;
+  }, [products]);
 
   const form = useForm<SaleFormData>({
-    resolver: zodResolver(saleFormSchema),
+    resolver: zodResolver(createSaleFormSchema(productsRef.current)), // Pass the ref's current value
     defaultValues: {
       productId: '',
       quantitySold: 1,
       saleTimestamp: new Date().toISOString().slice(0, 16), // Format for datetime-local
     },
   });
+  
+  // Update resolver if products change to ensure schema uses latest product list
+  useEffect(() => {
+    form.reset(form.getValues(), {
+       // @ts-ignore - zodResolver is not strictly typed here but it works
+      resolver: zodResolver(createSaleFormSchema(productsRef.current)),
+    });
+  }, [products, form]);
+
 
   useEffect(() => {
     if (isOpen) {
@@ -98,40 +149,40 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
 
 
   const handleProductSelect = (product: Product) => {
-    form.setValue('productId', product.id);
+    form.setValue('productId', product.id, { shouldValidate: true });
     setSelectedProduct(product);
-    setSearchValue(product.name); // Update search value to reflect selection
+    setSearchValue(product.name); 
     setComboboxOpen(false);
-    if (form.getValues('quantitySold') > product.quantity) {
-      form.setValue('quantitySold', product.quantity > 0 ? 1 : 0);
+    
+    // Reset quantity or adjust if current quantity is too high for the new product.
+    const currentQuantity = form.getValues('quantitySold');
+    if (currentQuantity > product.quantity) {
+        form.setValue('quantitySold', product.quantity > 0 ? 1 : 0, { shouldValidate: true });
+    } else if (product.type === 'unit' && !Number.isInteger(currentQuantity)) {
+        form.setValue('quantitySold', Math.floor(currentQuantity) || 1, { shouldValidate: true });
+    } else if (currentQuantity <=0) {
+        form.setValue('quantitySold', 1, { shouldValidate: true });
     }
-     // Clear errors for productId if any
     form.clearErrors('productId');
   };
 
   const onSubmit = (data: SaleFormData) => {
-    const product = products.find((p) => p.id === data.productId); // Use original products list for final validation
-    if (!product) {
-      form.setError('productId', { type: 'manual', message: 'المنتج المختار غير موجود.' });
-      return;
-    }
-    if (data.quantitySold > product.quantity) {
-      form.setError('quantitySold', {
-        type: 'manual',
-        message: `الكمية المتوفرة لـ "${product.name}" هي ${product.quantity} فقط.`,
-      });
-      return;
-    }
-    
+    // Validation is now primarily handled by Zod's superRefine.
+    // Final check can be minimal or rely on Zod.
     const saleTime = new Date(data.saleTimestamp).getTime();
     onRecordSale(data.productId, data.quantitySold, saleTime);
     onClose();
   };
 
+  const quantityStep = useMemo(() => {
+    if (selectedProduct?.type === 'unit') return '1';
+    return '0.01'; // Allow decimals for powder and liquid
+  }, [selectedProduct]);
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       if (!open) onClose();
-      setComboboxOpen(false); // Ensure combobox closes if dialog closes
+      setComboboxOpen(false); 
     }}>
       <DialogContent className="sm:max-w-md bg-card text-card-foreground">
         <DialogHeader>
@@ -164,7 +215,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                           )}
                         >
                           {field.value
-                            ? availableProducts.find(
+                            ? products.find( // Use 'products' here for display consistency after selection
                                 (product) => product.id === field.value
                               )?.name
                             : "اختر منتجاً..."}
@@ -184,7 +235,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                           <CommandGroup>
                             {filteredProducts.map((product) => (
                               <CommandItem
-                                value={product.name} // Use product.name for cmdk filtering, actual value is product.id
+                                value={product.name} 
                                 key={product.id}
                                 onSelect={() => handleProductSelect(product)}
                               >
@@ -196,7 +247,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                                       : "opacity-0"
                                   )}
                                 />
-                                {product.name} (المتوفر: {product.quantity})
+                                {product.name} (المتوفر: {product.quantity.toLocaleString()})
                               </CommandItem>
                             ))}
                           </CommandGroup>
@@ -216,7 +267,9 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
 
             {selectedProduct && (
               <p className="text-sm text-muted-foreground">
-                سعر الوحدة: {selectedProduct.wholesalePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
+                سعر الوحدة: {selectedProduct.wholesalePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج / {
+                  selectedProduct.type === 'powder' ? 'كجم' : selectedProduct.type === 'liquid' ? 'لتر' : 'قطعة'
+                }
               </p>
             )}
 
@@ -227,7 +280,14 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                 <FormItem>
                   <FormLabel>الكمية المباعة</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="0" {...field} disabled={!selectedProduct} />
+                    <Input 
+                      type="number" 
+                      placeholder="0" 
+                      {...field} 
+                      disabled={!selectedProduct}
+                      step={quantityStep}
+                      onChange={(e) => field.onChange(e.target.valueAsNumber === 0 ? "" : e.target.valueAsNumber)} // Handle 0 as empty for coerce
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -251,7 +311,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
               )}
             />
             
-            {selectedProduct && form.getValues("quantitySold") > 0 && (
+            {selectedProduct && form.watch("quantitySold") > 0 && (
               <div className="text-lg font-semibold text-center p-2 bg-muted rounded-md">
                 الإجمالي: {(selectedProduct.wholesalePrice * (form.watch("quantitySold") || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
               </div>
@@ -262,7 +322,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
               <Button type="button" variant="outline" onClick={onClose}>
                 إلغاء
               </Button>
-              <Button type="submit" variant="default" disabled={!selectedProduct || availableProducts.length === 0}>
+              <Button type="submit" variant="default" disabled={!selectedProduct || availableProducts.length === 0 || !form.formState.isValid}>
                 <ShoppingCart className="ms-2 h-4 w-4" />
                 تسجيل البيع
               </Button>
@@ -273,4 +333,3 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
     </Dialog>
   );
 }
-

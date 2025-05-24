@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -17,12 +17,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -37,18 +35,25 @@ interface EditProductModalProps {
   productToEdit: Product | null;
 }
 
-const productFormSchema = z.object({
+const createProductFormSchema = () => z.object({
   name: z.string().min(2, { message: 'اسم المنتج يجب أن يكون حرفين على الأقل.' }),
   type: z.enum(['powder', 'liquid', 'unit'], {
     required_error: 'يجب اختيار نوع المنتج.',
   }),
   wholesalePrice: z.coerce
-    .number({ invalid_type_error: 'السعر يجب أن يكون رقماً.' })
+    .number({ invalid_type_error: 'السعر يجب أن يكون رقماً.', required_error: "السعر مطلوب." })
     .positive({ message: 'السعر يجب أن يكون إيجابياً.' }),
   quantity: z.coerce
-    .number({ invalid_type_error: 'الكمية يجب أن تكون رقماً.' })
-    .positive({ message: 'الكمية يجب أن تكون إيجابية.' })
-    .int({ message: 'الكمية يجب أن تكون رقماً صحيحاً.' }),
+    .number({ invalid_type_error: 'الكمية يجب أن تكون رقماً.', required_error: "الكمية مطلوبة." })
+    .positive({ message: 'الكمية يجب أن تكون إيجابية.' }),
+}).superRefine((values, ctx) => {
+  if (values.type === 'unit' && values.quantity !== undefined && !Number.isInteger(values.quantity)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'كمية منتجات الوحدة يجب أن تكون رقماً صحيحاً.',
+      path: ['quantity'],
+    });
+  }
 });
 
 const unitLabels: Record<ProductType, { price: string; quantity: string; icon: React.ElementType }> = {
@@ -61,12 +66,17 @@ export function EditProductModal({ isOpen, onClose, onSaveEdit, productToEdit }:
   const [currentProductType, setCurrentProductType] = useState<ProductType>(productToEdit?.type || 'unit');
 
   const form = useForm<ProductFormData>({
-    resolver: zodResolver(productFormSchema),
-    defaultValues: {
+    resolver: zodResolver(createProductFormSchema()),
+    defaultValues: productToEdit ? {
+        name: productToEdit.name,
+        type: productToEdit.type,
+        wholesalePrice: productToEdit.wholesalePrice,
+        quantity: productToEdit.quantity,
+    } : {
       name: '',
       type: 'unit',
-      wholesalePrice: 0,
-      quantity: 0,
+      wholesalePrice: undefined,
+      quantity: undefined,
     },
   });
 
@@ -80,11 +90,11 @@ export function EditProductModal({ isOpen, onClose, onSaveEdit, productToEdit }:
       });
       setCurrentProductType(productToEdit.type);
     } else if (!isOpen) {
-        form.reset({ // Reset to defaults when closing
+        form.reset({ 
             name: '',
             type: 'unit',
-            wholesalePrice: 0,
-            quantity: 0,
+            wholesalePrice: undefined,
+            quantity: undefined,
         });
         setCurrentProductType('unit');
     }
@@ -100,6 +110,11 @@ export function EditProductModal({ isOpen, onClose, onSaveEdit, productToEdit }:
   const selectedUnitLabels = unitLabels[currentProductType];
   const IconComponent = selectedUnitLabels.icon;
 
+  const quantityStep = useMemo(() => {
+    if (currentProductType === 'unit') return '1';
+    return '0.01'; 
+  }, [currentProductType]);
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[425px] bg-card text-card-foreground">
@@ -109,7 +124,7 @@ export function EditProductModal({ isOpen, onClose, onSaveEdit, productToEdit }:
             قم بتحديث تفاصيل المنتج.
           </DialogDescription>
         </DialogHeader>
-        {productToEdit && ( // Only render form if productToEdit is available
+        {productToEdit && ( 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-4">
               <FormField
@@ -135,10 +150,12 @@ export function EditProductModal({ isOpen, onClose, onSaveEdit, productToEdit }:
                     <FormControl>
                       <RadioGroup
                         onValueChange={(value) => {
-                          field.onChange(value as ProductType);
-                          setCurrentProductType(value as ProductType);
+                          const newType = value as ProductType;
+                          field.onChange(newType);
+                          setCurrentProductType(newType);
+                          form.setValue('quantity', form.getValues('quantity'), { shouldValidate: true });
                         }}
-                        value={field.value} // Ensure value is controlled
+                        value={field.value} 
                         className="flex flex-col space-y-1"
                       >
                         <FormItem className="flex items-center space-s-3 space-y-0">
@@ -180,7 +197,14 @@ export function EditProductModal({ isOpen, onClose, onSaveEdit, productToEdit }:
                   <FormItem>
                     <FormLabel>سعر الجملة ({selectedUnitLabels.price})</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                       <Input 
+                        type="number" 
+                        step="0.01" 
+                        placeholder="0.00" 
+                        {...field} 
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.valueAsNumber === 0 ? "" : e.target.valueAsNumber)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -194,7 +218,14 @@ export function EditProductModal({ isOpen, onClose, onSaveEdit, productToEdit }:
                   <FormItem>
                     <FormLabel>الكمية في المخزون ({selectedUnitLabels.quantity})</FormLabel>
                     <FormControl>
-                      <Input type="number" step="1" placeholder="0" {...field} />
+                      <Input 
+                        type="number" 
+                        step={quantityStep} 
+                        placeholder="0" 
+                        {...field} 
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.valueAsNumber === 0 ? "" : e.target.valueAsNumber)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -205,7 +236,7 @@ export function EditProductModal({ isOpen, onClose, onSaveEdit, productToEdit }:
                 <Button type="button" variant="outline" onClick={onClose}>
                   إلغاء
                 </Button>
-                <Button type="submit" variant="default">
+                <Button type="submit" variant="default" disabled={!form.formState.isValid}>
                   <Save className="ms-2 h-4 w-4" />
                   حفظ التعديلات
                 </Button>
