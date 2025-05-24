@@ -28,8 +28,8 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
 
   const dailyAndWeeklyStats = useMemo(() => {
     if (!isSalesLoaded) return {
-      todaySalesValue: 0, todayUnitsSold: 0,
-      thisWeekSalesValue: 0, thisWeekUnitsSold: 0
+      todaySalesValue: 0,
+      thisWeekSalesValue: 0,
     };
 
     const todayStart = startOfDay(now);
@@ -42,9 +42,7 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
 
     return {
       todaySalesValue: salesToday.reduce((sum, s) => sum + s.totalSaleAmount, 0),
-      todayUnitsSold: salesToday.reduce((sum, s) => sum + s.quantitySold, 0),
       thisWeekSalesValue: salesThisWeek.reduce((sum, s) => sum + s.totalSaleAmount, 0),
-      thisWeekUnitsSold: salesThisWeek.reduce((sum, s) => sum + s.quantitySold, 0),
     };
   }, [sales, isSalesLoaded, now]);
 
@@ -53,7 +51,7 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
 
   const recentSales = useMemo(() => {
     if (!isSalesLoaded) return [];
-    return sales.sort((a, b) => b.saleTimestamp - a.saleTimestamp).slice(0, 5);
+    return sales.sort((a, b) => b.saleTimestamp - a.timestamp).slice(0, 5);
   }, [sales, isSalesLoaded]);
 
 
@@ -67,7 +65,7 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
 
   return (
     <div className="container mx-auto py-8 px-4 space-y-8">
-      <div className="grid gap-6 grid-cols-2 md:grid-cols-3">
+      <div className="grid gap-6 grid-cols-2 md:grid-cols-2"> {/* Adjusted grid columns */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">مبيعات اليوم</CardTitle>
@@ -78,16 +76,7 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
             <p className="text-xs text-muted-foreground">إجمالي قيمة المبيعات لليوم الحالي</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">الوحدات المباعة اليوم</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dailyAndWeeklyStats.todayUnitsSold.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">إجمالي عدد الوحدات المباعة اليوم</p>
-          </CardContent>
-        </Card>
+        
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">مبيعات هذا الأسبوع</CardTitle>
@@ -98,16 +87,7 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
             <p className="text-xs text-muted-foreground">إجمالي قيمة المبيعات لهذا الأسبوع</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">الوحدات المباعة هذا الأسبوع</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dailyAndWeeklyStats.thisWeekUnitsSold.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">إجمالي عدد الوحدات المباعة هذا الأسبوع</p>
-          </CardContent>
-        </Card>
+        
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">عدد أنواع المنتجات</CardTitle>
