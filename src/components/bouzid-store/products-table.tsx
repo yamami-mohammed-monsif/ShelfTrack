@@ -11,12 +11,15 @@ import {
   TableRow,
   TableCaption,
 } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 import type { Product, ProductType } from '@/lib/types';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale'; 
+import { Pencil } from 'lucide-react';
 
 interface ProductsTableProps {
   products: Product[];
+  onEditProduct: (product: Product) => void;
 }
 
 const productTypeLabels: Record<ProductType, string> = {
@@ -31,7 +34,7 @@ const unitSuffix: Record<ProductType, string> = {
   unit: 'قطعة',
 };
 
-export function ProductsTable({ products }: ProductsTableProps) {
+export function ProductsTable({ products, onEditProduct }: ProductsTableProps) {
   if (products.length === 0) {
     return (
       <div className="text-center py-10 px-4 text-muted-foreground">
@@ -51,7 +54,8 @@ export function ProductsTable({ products }: ProductsTableProps) {
             <TableHead className="rtl:text-right">النوع</TableHead>
             <TableHead className="text-center">سعر الجملة</TableHead>
             <TableHead className="text-center">الكمية</TableHead>
-            <TableHead className="text-left rtl:text-right min-w-[150px]">تاريخ الإضافة</TableHead>
+            <TableHead className="text-left rtl:text-right min-w-[150px]">تاريخ الإضافة/التعديل</TableHead>
+            <TableHead className="text-center">تعديل</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -67,6 +71,11 @@ export function ProductsTable({ products }: ProductsTableProps) {
               </TableCell>
               <TableCell className="text-left rtl:text-right">
                 {format(new Date(product.timestamp), 'PPpp', { locale: arSA })}
+              </TableCell>
+              <TableCell className="text-center">
+                <Button variant="outline" size="icon" onClick={() => onEditProduct(product)} aria-label="تعديل المنتج">
+                  <Pencil className="h-4 w-4" />
+                </Button>
               </TableCell>
             </TableRow>
           ))}

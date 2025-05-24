@@ -39,9 +39,27 @@ export function useProductsStorage() {
     return newProduct;
   }, []);
 
+  const editProduct = useCallback((productId: string, updatedData: ProductFormData): Product | undefined => {
+    let editedProduct: Product | undefined;
+    setProducts((prevProducts) =>
+      prevProducts.map((product) => {
+        if (product.id === productId) {
+          editedProduct = {
+            ...product,
+            ...updatedData,
+            timestamp: Date.now(), // Update timestamp on edit
+          };
+          return editedProduct;
+        }
+        return product;
+      })
+    );
+    return editedProduct;
+  }, []);
+
   const getProducts = useCallback((): Product[] => {
     return products;
   }, [products]);
 
-  return { products, addProduct, getProducts, isLoaded };
+  return { products, addProduct, editProduct, getProducts, isLoaded };
 }

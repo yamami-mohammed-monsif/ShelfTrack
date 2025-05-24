@@ -1,25 +1,52 @@
 
 'use client';
 
-import React from 'react';
-import type { Metadata } from 'next';
+import React, { useState } from 'react';
+// import type { Metadata } from 'next'; // Not used in client component directly
 import { AppHeader } from '@/components/bouzid-store/app-header';
 import { ProductsTable } from '@/components/bouzid-store/products-table';
+import { EditProductModal } from '@/components/bouzid-store/edit-product-modal';
 import { useProductsStorage } from '@/hooks/use-products-storage';
+import { useToast } from "@/hooks/use-toast";
+import type { Product, ProductFormData } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Package } from 'lucide-react';
 
-// It's good practice to export metadata from page components
-// export const metadata: Metadata = {
-//   title: 'قائمة المنتجات - متجر بوزيد',
-//   description: 'عرض وإدارة قائمة المنتجات في مخزون متجر بوزيد.',
-// };
-// However, for client components, you'd typically set this in a parent layout or use a different mechanism if needed dynamically.
-// For simplicity, we'll rely on the root layout's title for now or you can use `useEffect` to set document.title.
-
 
 export default function ProductsListPage() {
-  const { products, isLoaded } = useProductsStorage();
+  const { products, editProduct, isLoaded } = useProductsStorage();
+  const { toast } = useToast();
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [productToEdit, setProductToEdit] = useState<Product | null>(null);
+
+  const handleOpenEditModal = (product: Product) => {
+    setProductToEdit(product);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setProductToEdit(null); 
+  };
+
+  const handleSaveEditedProduct = (productId: string, data: ProductFormData) => {
+    const edited = editProduct(productId, data);
+    if (edited) {
+      toast({
+        title: "نجاح",
+        description: `تم تعديل المنتج "${edited.name}" بنجاح.`,
+        variant: "default",
+      });
+    } else {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء تعديل المنتج.",
+        variant: "destructive",
+      });
+    }
+    handleCloseEditModal();
+  };
+
 
   if (!isLoaded) {
     return (
@@ -45,11 +72,18 @@ export default function ProductsListPage() {
             <CardDescription>عرض جميع المنتجات الموجودة في المخزون وتفاصيلها.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            {/* If p-0 on CardContent, ensure ProductsTable handles its own padding or the table looks good edge-to-edge */}
-            <ProductsTable products={products} />
+            <ProductsTable products={products} onEditProduct={handleOpenEditModal} />
           </CardContent>
         </Card>
       </main>
+      {productToEdit && (
+         <EditProductModal
+            isOpen={isEditModalOpen}
+            onClose={handleCloseEditModal}
+            onSaveEdit={handleSaveEditedProduct}
+            productToEdit={productToEdit}
+        />
+      )}
     </div>
   );
 }
