@@ -18,7 +18,7 @@ export interface ProductFormData {
 }
 
 export interface Sale {
-  id: string;
+  id:string;
   productId: string;
   productNameSnapshot: string; // Snapshot of product name at time of sale
   quantitySold: number;
@@ -39,4 +39,13 @@ export interface SalesDataPoint {
   date: string; // Could be day, week start, month start, etc.
   profit: number;
   loss: number;
+}
+
+export interface Notification {
+  id: string;
+  message: string;
+  timestamp: number;
+  read: boolean;
+  productId?: string; // To link to a product for specific notifications like low stock
+  href?: string; // Optional link for the notification (e.g., to product page)
 }

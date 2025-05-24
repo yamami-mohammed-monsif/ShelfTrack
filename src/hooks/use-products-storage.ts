@@ -1,12 +1,16 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import type { Product, ProductFormData } from '@/lib/types';
+import type { Product, ProductFormData, ProductType } from '@/lib/types';
+import { useNotificationsStorage } from './use-notifications-storage';
+import { isLowStock, wasLowStock, unitSuffix } from '@/lib/product-utils';
+
 
 const PRODUCTS_STORAGE_KEY = 'bouzid_store_products';
 
 export function useProductsStorage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const { addNotification } = useNotificationsStorage();
 
   useEffect(() => {
     try {
@@ -30,6 +34,11 @@ export function useProductsStorage() {
     }
   }, [products, isLoaded]);
 
+  const createLowStockNotification = (product: Product) => {
+    const message = `"${product.name}" أوشك على النفاد. الكمية المتبقية: ${product.quantity.toLocaleString()} ${unitSuffix[product.type]}.`;
+    addNotification(message, product.id, `/products/${product.id}`);
+  };
+
   const addProduct = useCallback((productData: ProductFormData): Product => {
     const newProduct: Product = {
       ...productData,
@@ -37,35 +46,52 @@ export function useProductsStorage() {
       timestamp: Date.now(),
     };
     setProducts((prevProducts) => [...prevProducts, newProduct]);
+    if (isLowStock(newProduct)) {
+      createLowStockNotification(newProduct);
+    }
     return newProduct;
-  }, []);
+  }, [addNotification]);
 
   const editProduct = useCallback((productId: string, updatedData: ProductFormData): Product | undefined => {
+    let originalProduct: Product | undefined;
     let editedProduct: Product | undefined;
-    setProducts((prevProducts) =>
-      prevProducts.map((product) => {
+
+    setProducts((prevProducts) => {
+      return prevProducts.map((product) => {
         if (product.id === productId) {
+          originalProduct = { ...product }; // Capture state before edit
           editedProduct = {
             ...product,
             ...updatedData,
-            timestamp: Date.now(), // Update timestamp on edit
+            timestamp: Date.now(),
           };
           return editedProduct;
         }
         return product;
-      })
-    );
+      });
+    });
+    
+    if (originalProduct && editedProduct) {
+      const wasPreviouslyLow = wasLowStock(originalProduct.type, originalProduct.quantity);
+      const isNowLow = isLowStock(editedProduct);
+      if (isNowLow && !wasPreviouslyLow) {
+        createLowStockNotification(editedProduct);
+      }
+    }
     return editedProduct;
-  }, []);
+  }, [addNotification]);
 
   const decreaseProductQuantity = useCallback((productId: string, quantityToDecrease: number): Product | undefined => {
+    let originalProduct: Product | undefined;
     let updatedProduct: Product | undefined;
+
     setProducts((prevProducts) =>
       prevProducts.map((product) => {
         if (product.id === productId) {
+          originalProduct = { ...product };
           updatedProduct = {
             ...product,
-            quantity: Math.max(0, product.quantity - quantityToDecrease), // Ensure quantity doesn't go below 0
+            quantity: Math.max(0, product.quantity - quantityToDecrease),
             timestamp: Date.now(),
           };
           return updatedProduct;
@@ -73,8 +99,16 @@ export function useProductsStorage() {
         return product;
       })
     );
+
+    if (originalProduct && updatedProduct) {
+      const wasPreviouslyLow = wasLowStock(originalProduct.type, originalProduct.quantity);
+      const isNowLow = isLowStock(updatedProduct);
+      if (isNowLow && !wasPreviouslyLow) {
+        createLowStockNotification(updatedProduct);
+      }
+    }
     return updatedProduct;
-  }, []);
+  }, [addNotification]);
 
   const getProducts = useCallback((): Product[] => {
     return products;

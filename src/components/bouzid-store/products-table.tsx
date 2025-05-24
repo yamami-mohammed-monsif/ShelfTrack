@@ -13,7 +13,8 @@ import {
   TableCaption,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import type { Product, ProductType } from '@/lib/types';
+import type { Product } from '@/lib/types';
+import { productTypeLabels, unitSuffix, isLowStock } from '@/lib/product-utils';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale'; 
 import { Pencil } from 'lucide-react';
@@ -23,29 +24,6 @@ interface ProductsTableProps {
   products: Product[];
   onEditProduct: (product: Product) => void;
 }
-
-const productTypeLabels: Record<ProductType, string> = {
-  powder: 'مسحوق',
-  liquid: 'سائل',
-  unit: 'وحدة',
-};
-
-const unitSuffix: Record<ProductType, string> = {
-  powder: 'كجم',
-  liquid: 'لتر',
-  unit: 'قطعة',
-};
-
-const lowStockThresholds: Record<ProductType, number> = {
-  powder: 1,
-  liquid: 2,
-  unit: 3,
-};
-
-const isLowStock = (product: Product): boolean => {
-  const threshold = lowStockThresholds[product.type];
-  return product.quantity < threshold;
-};
 
 export function ProductsTable({ products, onEditProduct }: ProductsTableProps) {
   if (products.length === 0) {
