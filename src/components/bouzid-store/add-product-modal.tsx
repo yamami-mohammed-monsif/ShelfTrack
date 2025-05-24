@@ -40,12 +40,16 @@ const createProductFormSchema = () => z.object({
     required_error: 'يجب اختيار نوع المنتج.',
   }),
   wholesalePrice: z.coerce
-    .number({ required_error: "السعر مطلوب." })
-    .refine(val => !Number.isNaN(val), { message: "السعر يجب أن يكون رقماً صالحاً." })
+    .number({ 
+      required_error: "السعر مطلوب.",
+      invalid_type_error: "السعر يجب أن يكون رقماً صالحاً." 
+    })
     .positive({ message: 'السعر يجب أن يكون إيجابياً.' }),
   quantity: z.coerce
-    .number({ required_error: "الكمية مطلوبة." })
-    .refine(val => !Number.isNaN(val), { message: "الكمية يجب أن تكون رقماً صالحاً." })
+    .number({ 
+      required_error: "الكمية مطلوبة.",
+      invalid_type_error: "الكمية يجب أن تكون رقماً صالحاً."
+    })
     .positive({ message: 'الكمية يجب أن تكون إيجابية.' }),
 }).superRefine((values, ctx) => {
   if (values.type === 'unit' && values.quantity !== undefined && !Number.isInteger(values.quantity)) {

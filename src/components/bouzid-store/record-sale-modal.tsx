@@ -51,8 +51,10 @@ interface RecordSaleModalProps {
 const createSaleFormSchema = (allProducts: Product[]) => z.object({
   productId: z.string().min(1, { message: 'الرجاء اختيار منتج.' }),
   quantitySold: z.coerce
-    .number({ required_error: "الكمية المباعة مطلوبة." })
-    .refine(val => !Number.isNaN(val), { message: "الكمية المباعة يجب أن تكون رقماً صالحاً."})
+    .number({ 
+      required_error: "الكمية المباعة مطلوبة.",
+      invalid_type_error: "الكمية المباعة يجب أن تكون رقماً صالحاً."
+    })
     .positive({ message: 'الكمية المباعة يجب أن تكون أكبر من صفر.' }),
   saleTimestamp: z.string().refine(val => {
     if (!val) return false; 
@@ -77,11 +79,10 @@ const createSaleFormSchema = (allProducts: Product[]) => z.object({
   
   // Ensure quantitySold is a number before checking isInteger or product.quantity
   if (typeof values.quantitySold !== 'number' || Number.isNaN(values.quantitySold)) {
-    // This case should be caught by the .refine on quantitySold, but as a safeguard:
-     if (values.quantitySold !== undefined) { // only add issue if not caught by required
+     if (values.quantitySold !== undefined) { 
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "الكمية المباعة يجب أن تكون رقماً صالحاً.",
+          message: "الكمية المباعة يجب أن تكون رقماً صالحاً.", // This specific message might be shadowed by invalid_type_error
           path: ['quantitySold'],
         });
      }
@@ -121,14 +122,15 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
     resolver: zodResolver(createSaleFormSchema(productsRef.current)), 
     defaultValues: {
       productId: '',
-      quantitySold: undefined, // Start with undefined to show placeholder / trigger validation
+      quantitySold: undefined, 
       saleTimestamp: new Date().toISOString().slice(0, 16), 
     },
   });
   
   useEffect(() => {
+    // Re-initialize the resolver when products change to ensure the superRefine has the latest product list
     form.reset(form.getValues(), {
-       // @ts-ignore 
+       // @ts-ignore - Zod resolver type can be tricky with dynamic schemas but this pattern is common
       resolver: zodResolver(createSaleFormSchema(productsRef.current)),
     });
   }, [products, form]);
@@ -168,7 +170,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
     if (currentQuantityInput === undefined || currentQuantityInput <=0) {
         newQuantity = product.quantity > 0 ? 1 : undefined;
     } else if (currentQuantityInput > product.quantity) {
-        newQuantity = product.quantity > 0 ? 1 : undefined; // Or set to product.quantity if you prefer max available
+        newQuantity = product.quantity > 0 ? 1 : undefined; 
     } else if (product.type === 'unit' && !Number.isInteger(currentQuantityInput)) {
         newQuantity = Math.floor(currentQuantityInput) || (product.quantity > 0 ? 1 : undefined);
     }
