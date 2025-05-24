@@ -2,6 +2,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import {
   Table,
   TableBody,
@@ -61,7 +62,11 @@ export function ProductsTable({ products, onEditProduct }: ProductsTableProps) {
         <TableBody>
           {products.sort((a, b) => b.timestamp - a.timestamp).map((product) => (
             <TableRow key={product.id}>
-              <TableCell className="font-medium rtl:text-right">{product.name}</TableCell>
+              <TableCell className="font-medium rtl:text-right">
+                <Link href={`/products/${product.id}`} className="hover:underline text-primary">
+                  {product.name}
+                </Link>
+              </TableCell>
               <TableCell className="rtl:text-right">{productTypeLabels[product.type]}</TableCell>
               <TableCell className="text-center">
                 {product.wholesalePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
@@ -84,3 +89,4 @@ export function ProductsTable({ products, onEditProduct }: ProductsTableProps) {
     </div>
   );
 }
+
