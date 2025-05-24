@@ -41,10 +41,12 @@ const createProductFormSchema = () => z.object({
     required_error: 'يجب اختيار نوع المنتج.',
   }),
   wholesalePrice: z.coerce
-    .number({ invalid_type_error: 'السعر يجب أن يكون رقماً.', required_error: "السعر مطلوب." })
+    .number({ required_error: "السعر مطلوب." })
+    .refine(val => !Number.isNaN(val), { message: "السعر يجب أن يكون رقماً صالحاً." })
     .positive({ message: 'السعر يجب أن يكون إيجابياً.' }),
   quantity: z.coerce
-    .number({ invalid_type_error: 'الكمية يجب أن تكون رقماً.', required_error: "الكمية مطلوبة." })
+    .number({ required_error: "الكمية مطلوبة." })
+    .refine(val => !Number.isNaN(val), { message: "الكمية يجب أن تكون رقماً صالحاً." })
     .positive({ message: 'الكمية يجب أن تكون إيجابية.' }),
 }).superRefine((values, ctx) => {
   if (values.type === 'unit' && values.quantity !== undefined && !Number.isInteger(values.quantity)) {
@@ -202,8 +204,20 @@ export function EditProductModal({ isOpen, onClose, onSaveEdit, productToEdit }:
                         step="0.01" 
                         placeholder="0.00" 
                         {...field} 
-                        value={field.value ?? ""}
-                        onChange={(e) => field.onChange(e.target.valueAsNumber === 0 ? "" : e.target.valueAsNumber)}
+                        value={field.value === undefined || Number.isNaN(Number(field.value)) ? "" : field.value}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          const valueAsString = e.target.value;
+                          if (valueAsString === "" || valueAsString === "-") {
+                            field.onChange(undefined);
+                          } else {
+                            const valueAsNum = e.target.valueAsNumber;
+                            if (Number.isNaN(valueAsNum)) {
+                              field.onChange(valueAsString);
+                            } else {
+                              field.onChange(valueAsNum);
+                            }
+                          }
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -223,8 +237,20 @@ export function EditProductModal({ isOpen, onClose, onSaveEdit, productToEdit }:
                         step={quantityStep} 
                         placeholder="0" 
                         {...field} 
-                        value={field.value ?? ""}
-                        onChange={(e) => field.onChange(e.target.valueAsNumber === 0 ? "" : e.target.valueAsNumber)}
+                        value={field.value === undefined || Number.isNaN(Number(field.value)) ? "" : field.value}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          const valueAsString = e.target.value;
+                          if (valueAsString === "" || valueAsString === "-") {
+                            field.onChange(undefined);
+                          } else {
+                            const valueAsNum = e.target.valueAsNumber;
+                            if (Number.isNaN(valueAsNum)) {
+                              field.onChange(valueAsString);
+                            } else {
+                              field.onChange(valueAsNum);
+                            }
+                          }
+                        }}
                       />
                     </FormControl>
                     <FormMessage />

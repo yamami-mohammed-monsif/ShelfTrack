@@ -40,10 +40,12 @@ const createProductFormSchema = () => z.object({
     required_error: 'يجب اختيار نوع المنتج.',
   }),
   wholesalePrice: z.coerce
-    .number({ invalid_type_error: 'السعر يجب أن يكون رقماً.', required_error: "السعر مطلوب." })
+    .number({ required_error: "السعر مطلوب." })
+    .refine(val => !Number.isNaN(val), { message: "السعر يجب أن يكون رقماً صالحاً." })
     .positive({ message: 'السعر يجب أن يكون إيجابياً.' }),
   quantity: z.coerce
-    .number({ invalid_type_error: 'الكمية يجب أن تكون رقماً.', required_error: "الكمية مطلوبة." })
+    .number({ required_error: "الكمية مطلوبة." })
+    .refine(val => !Number.isNaN(val), { message: "الكمية يجب أن تكون رقماً صالحاً." })
     .positive({ message: 'الكمية يجب أن تكون إيجابية.' }),
 }).superRefine((values, ctx) => {
   if (values.type === 'unit' && values.quantity !== undefined && !Number.isInteger(values.quantity)) {
@@ -69,8 +71,8 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
     defaultValues: {
       name: '',
       type: 'unit',
-      wholesalePrice: undefined, // Use undefined for react-hook-form to treat as empty
-      quantity: undefined,     // Use undefined for react-hook-form to treat as empty
+      wholesalePrice: undefined, 
+      quantity: undefined,     
     },
   });
 
@@ -96,7 +98,7 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
 
   const quantityStep = useMemo(() => {
     if (currentProductType === 'unit') return '1';
-    return '0.01'; // Allow decimals for powder and liquid
+    return '0.01'; 
   }, [currentProductType]);
 
   return (
@@ -136,9 +138,9 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                         const newType = value as ProductType;
                         field.onChange(newType);
                         setCurrentProductType(newType);
-                        form.setValue('quantity', form.getValues('quantity'), { shouldValidate: true }); // Re-validate quantity
+                        form.setValue('quantity', form.getValues('quantity'), { shouldValidate: true }); 
                       }}
-                      value={field.value} // Control value directly
+                      value={field.value} 
                       className="flex flex-col space-y-1"
                     >
                       <FormItem className="flex items-center space-s-3 space-y-0">
@@ -184,9 +186,21 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                       type="number" 
                       step="0.01" 
                       placeholder="0.00" 
-                      {...field} 
-                      value={field.value ?? ""} // Handle undefined for empty input
-                      onChange={(e) => field.onChange(e.target.valueAsNumber === 0 ? "" : e.target.valueAsNumber)}
+                      {...field}
+                      value={field.value === undefined || Number.isNaN(Number(field.value)) ? "" : field.value}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        const valueAsString = e.target.value;
+                        if (valueAsString === "" || valueAsString === "-") {
+                          field.onChange(undefined); 
+                        } else {
+                          const valueAsNum = e.target.valueAsNumber;
+                          if (Number.isNaN(valueAsNum)) {
+                            field.onChange(valueAsString); 
+                          } else {
+                            field.onChange(valueAsNum);
+                          }
+                        }
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -206,8 +220,20 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                       step={quantityStep} 
                       placeholder="0" 
                       {...field} 
-                      value={field.value ?? ""} // Handle undefined for empty input
-                      onChange={(e) => field.onChange(e.target.valueAsNumber === 0 ? "" : e.target.valueAsNumber)}
+                      value={field.value === undefined || Number.isNaN(Number(field.value)) ? "" : field.value}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        const valueAsString = e.target.value;
+                        if (valueAsString === "" || valueAsString === "-") {
+                          field.onChange(undefined);
+                        } else {
+                          const valueAsNum = e.target.valueAsNumber;
+                           if (Number.isNaN(valueAsNum)) {
+                            field.onChange(valueAsString);
+                          } else {
+                            field.onChange(valueAsNum);
+                          }
+                        }
+                      }}
                     />
                   </FormControl>
                   <FormMessage />

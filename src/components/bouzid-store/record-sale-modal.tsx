@@ -51,13 +51,11 @@ interface RecordSaleModalProps {
 const createSaleFormSchema = (allProducts: Product[]) => z.object({
   productId: z.string().min(1, { message: 'الرجاء اختيار منتج.' }),
   quantitySold: z.coerce
-    .number({ 
-      invalid_type_error: 'الكمية يجب أن تكون رقماً.',
-      required_error: "الكمية المباعة مطلوبة." 
-    })
+    .number({ required_error: "الكمية المباعة مطلوبة." })
+    .refine(val => !Number.isNaN(val), { message: "الكمية المباعة يجب أن تكون رقماً صالحاً."})
     .positive({ message: 'الكمية المباعة يجب أن تكون أكبر من صفر.' }),
   saleTimestamp: z.string().refine(val => {
-    if (!val) return false; // Ensure value is not empty
+    if (!val) return false; 
     const date = new Date(val);
     return !isNaN(date.getTime());
   }, {
@@ -69,8 +67,6 @@ const createSaleFormSchema = (allProducts: Product[]) => z.object({
   const product = allProducts.find(p => p.id === values.productId);
 
   if (!product) {
-    // This case should ideally be handled by the combobox selection ensuring a valid product.
-    // If it still occurs, it indicates an issue with product selection logic.
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "المنتج المختار غير صالح.",
@@ -78,6 +74,20 @@ const createSaleFormSchema = (allProducts: Product[]) => z.object({
     });
     return;
   }
+  
+  // Ensure quantitySold is a number before checking isInteger or product.quantity
+  if (typeof values.quantitySold !== 'number' || Number.isNaN(values.quantitySold)) {
+    // This case should be caught by the .refine on quantitySold, but as a safeguard:
+     if (values.quantitySold !== undefined) { // only add issue if not caught by required
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "الكمية المباعة يجب أن تكون رقماً صالحاً.",
+          path: ['quantitySold'],
+        });
+     }
+    return;
+  }
+
 
   if (product.type === 'unit' && !Number.isInteger(values.quantitySold)) {
     ctx.addIssue({
@@ -102,25 +112,23 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
   const [comboboxOpen, setComboboxOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
 
-  // Ref to hold the latest products for Zod schema
   const productsRef = useRef(products);
   useEffect(() => {
     productsRef.current = products;
   }, [products]);
 
   const form = useForm<SaleFormData>({
-    resolver: zodResolver(createSaleFormSchema(productsRef.current)), // Pass the ref's current value
+    resolver: zodResolver(createSaleFormSchema(productsRef.current)), 
     defaultValues: {
       productId: '',
-      quantitySold: 1,
-      saleTimestamp: new Date().toISOString().slice(0, 16), // Format for datetime-local
+      quantitySold: undefined, // Start with undefined to show placeholder / trigger validation
+      saleTimestamp: new Date().toISOString().slice(0, 16), 
     },
   });
   
-  // Update resolver if products change to ensure schema uses latest product list
   useEffect(() => {
     form.reset(form.getValues(), {
-       // @ts-ignore - zodResolver is not strictly typed here but it works
+       // @ts-ignore 
       resolver: zodResolver(createSaleFormSchema(productsRef.current)),
     });
   }, [products, form]);
@@ -130,7 +138,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
     if (isOpen) {
       form.reset({
         productId: '',
-        quantitySold: 1,
+        quantitySold: undefined,
         saleTimestamp: new Date().toISOString().slice(0, 16),
       });
       setSelectedProduct(null);
@@ -154,21 +162,22 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
     setSearchValue(product.name); 
     setComboboxOpen(false);
     
-    // Reset quantity or adjust if current quantity is too high for the new product.
-    const currentQuantity = form.getValues('quantitySold');
-    if (currentQuantity > product.quantity) {
-        form.setValue('quantitySold', product.quantity > 0 ? 1 : 0, { shouldValidate: true });
-    } else if (product.type === 'unit' && !Number.isInteger(currentQuantity)) {
-        form.setValue('quantitySold', Math.floor(currentQuantity) || 1, { shouldValidate: true });
-    } else if (currentQuantity <=0) {
-        form.setValue('quantitySold', 1, { shouldValidate: true });
+    const currentQuantityInput = form.getValues('quantitySold');
+    let newQuantity: number | undefined = currentQuantityInput;
+
+    if (currentQuantityInput === undefined || currentQuantityInput <=0) {
+        newQuantity = product.quantity > 0 ? 1 : undefined;
+    } else if (currentQuantityInput > product.quantity) {
+        newQuantity = product.quantity > 0 ? 1 : undefined; // Or set to product.quantity if you prefer max available
+    } else if (product.type === 'unit' && !Number.isInteger(currentQuantityInput)) {
+        newQuantity = Math.floor(currentQuantityInput) || (product.quantity > 0 ? 1 : undefined);
     }
+    
+    form.setValue('quantitySold', newQuantity, { shouldValidate: true });
     form.clearErrors('productId');
   };
 
   const onSubmit = (data: SaleFormData) => {
-    // Validation is now primarily handled by Zod's superRefine.
-    // Final check can be minimal or rely on Zod.
     const saleTime = new Date(data.saleTimestamp).getTime();
     onRecordSale(data.productId, data.quantitySold, saleTime);
     onClose();
@@ -176,7 +185,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
 
   const quantityStep = useMemo(() => {
     if (selectedProduct?.type === 'unit') return '1';
-    return '0.01'; // Allow decimals for powder and liquid
+    return '0.01'; 
   }, [selectedProduct]);
 
   return (
@@ -215,7 +224,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                           )}
                         >
                           {field.value
-                            ? products.find( // Use 'products' here for display consistency after selection
+                            ? products.find(
                                 (product) => product.id === field.value
                               )?.name
                             : "اختر منتجاً..."}
@@ -286,7 +295,20 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                       {...field} 
                       disabled={!selectedProduct}
                       step={quantityStep}
-                      onChange={(e) => field.onChange(e.target.valueAsNumber === 0 ? "" : e.target.valueAsNumber)} // Handle 0 as empty for coerce
+                      value={field.value === undefined || Number.isNaN(Number(field.value)) ? "" : field.value}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        const valueAsString = e.target.value;
+                        if (valueAsString === "" || valueAsString === "-") {
+                          field.onChange(undefined);
+                        } else {
+                          const valueAsNum = e.target.valueAsNumber;
+                          if (Number.isNaN(valueAsNum)) {
+                            field.onChange(valueAsString);
+                          } else {
+                            field.onChange(valueAsNum);
+                          }
+                        }
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -311,7 +333,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
               )}
             />
             
-            {selectedProduct && form.watch("quantitySold") > 0 && (
+            {selectedProduct && form.watch("quantitySold") > 0 && !Number.isNaN(form.watch("quantitySold")) && (
               <div className="text-lg font-semibold text-center p-2 bg-muted rounded-md">
                 الإجمالي: {(selectedProduct.wholesalePrice * (form.watch("quantitySold") || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
               </div>
