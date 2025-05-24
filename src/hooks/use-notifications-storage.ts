@@ -27,6 +27,7 @@ const NotificationActionTypes = {
   MARK_READ: 'MARK_AS_READ',
   MARK_ALL_READ: 'MARK_ALL_AS_READ',
   CLEAR_ALL: 'CLEAR_ALL_NOTIFICATIONS',
+  DELETE_BY_PRODUCT_ID: 'DELETE_BY_PRODUCT_ID',
 } as const;
 
 type NotificationAction =
@@ -34,7 +35,8 @@ type NotificationAction =
   | { type: typeof NotificationActionTypes.ADD; payload: { newNotification: Notification } }
   | { type: typeof NotificationActionTypes.MARK_READ; payload: { notificationId: string } }
   | { type: typeof NotificationActionTypes.MARK_ALL_READ }
-  | { type: typeof NotificationActionTypes.CLEAR_ALL };
+  | { type: typeof NotificationActionTypes.CLEAR_ALL }
+  | { type: typeof NotificationActionTypes.DELETE_BY_PRODUCT_ID; payload: { productId: string } };
 
 
 function pruneOldReadNotifications(notifications: Notification[]): Notification[] {
@@ -88,6 +90,11 @@ function notificationsReducer(state: NotificationsState, action: NotificationAct
       return {
         notifications: [],
         isLoaded: state.isLoaded, // Keep isLoaded true, just clear the data
+      };
+    case NotificationActionTypes.DELETE_BY_PRODUCT_ID:
+      return {
+        ...state,
+        notifications: state.notifications.filter(n => n.productId !== action.payload.productId),
       };
     default:
       return state;
@@ -174,6 +181,10 @@ export function useNotificationsStorage() {
     dispatch({ type: NotificationActionTypes.CLEAR_ALL });
   }, []);
 
+  const deleteNotificationsByProductId = useCallback((productId: string) => {
+    dispatch({ type: NotificationActionTypes.DELETE_BY_PRODUCT_ID, payload: { productId } });
+  }, []);
+
   const allSortedNotifications = useMemo(() => {
      return state.notifications;
   }, [state.notifications]);
@@ -189,7 +200,9 @@ export function useNotificationsStorage() {
     markAsRead,
     markAllAsRead,
     clearAllNotifications,
+    deleteNotificationsByProductId,
     unreadCount,
     isLoaded: state.isLoaded,
   };
 }
+

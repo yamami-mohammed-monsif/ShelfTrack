@@ -11,13 +11,25 @@ import { useSalesStorage } from '@/hooks/use-sales-storage';
 import { useToast } from '@/hooks/use-toast';
 import type { Product, ProductFormData, Sale, ProductType } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button'; // Added buttonVariants
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, TooltipProps } from 'recharts';
 import { ChartContainer, ChartTooltipContent, ChartLegendContent } from '@/components/ui/chart';
-import { Package, Edit3, DollarSign, TrendingUp, ListOrdered, CalendarDays } from 'lucide-react';
+import { Package, Edit3, DollarSign, TrendingUp, ListOrdered, CalendarDays, Trash2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { productTypeLabels, unitSuffix } from '@/lib/product-utils';
+import { cn } from '@/lib/utils';
 
 
 const CustomSalesTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
@@ -49,12 +61,14 @@ export default function ProductDetailPage() {
   const { 
     getProductById, 
     editProduct, 
+    deleteProduct,
     isLoaded: productsLoaded,
   } = useProductsStorage();
   const { sales, isSalesLoaded } = useSalesStorage();
 
   const [product, setProduct] = useState<Product | null | undefined>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     if (productsLoaded && productId) {
@@ -118,6 +132,19 @@ export default function ProductDetailPage() {
     handleCloseEditModal();
   };
 
+  const handleConfirmDelete = () => {
+    if (product) {
+      deleteProduct(product.id);
+      toast({
+        title: "نجاح",
+        description: `تم حذف المنتج "${product.name}" بنجاح.`,
+        variant: "default",
+      });
+      setIsDeleteDialogOpen(false);
+      router.push('/products'); 
+    }
+  };
+
   if (!productsLoaded || !isSalesLoaded) {
     return (
       <div className="flex flex-col min-h-screen bg-background">
@@ -150,15 +177,39 @@ export default function ProductDetailPage() {
       <AppHeader />
       <main className="flex-grow p-4 md:p-8 space-y-6">
         <Card className="shadow-lg rounded-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0 pb-2">
             <div className="flex items-center space-x-2 rtl:space-x-reverse">
               <Package className="h-6 w-6 text-primary" />
               <CardTitle className="text-xl">{product.name}</CardTitle>
             </div>
-            <Button variant="outline" size="sm" onClick={handleOpenEditModal}>
-              <Edit3 className="me-2 h-4 w-4" />
-              تعديل
-            </Button>
+            <div className="flex space-x-2 rtl:space-x-reverse">
+              <Button variant="outline" size="sm" onClick={handleOpenEditModal}>
+                <Edit3 className="me-2 h-4 w-4" />
+                تعديل
+              </Button>
+              <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/50">
+                    <Trash2 className="me-2 h-4 w-4" />
+                    حذف
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent dir="rtl">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      هل أنت متأكد أنك تريد حذف المنتج "{product.name}"؟ لا يمكن التراجع عن هذا الإجراء.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleConfirmDelete} className={cn(buttonVariants({variant: "destructive"}))}>
+                      تأكيد الحذف
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3 pt-4">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
@@ -293,3 +344,4 @@ export default function ProductDetailPage() {
     </div>
   );
 }
+

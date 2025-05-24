@@ -9,7 +9,7 @@ const PRODUCTS_STORAGE_KEY = 'bouzid_store_products';
 export function useProductsStorage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
-  const { addNotification } = useNotificationsStorage();
+  const { addNotification, deleteNotificationsByProductId } = useNotificationsStorage();
 
   useEffect(() => {
     try {
@@ -40,22 +40,19 @@ export function useProductsStorage() {
 
   const addProduct = useCallback((productData: ProductFormData): Product => {
     const newProduct: Product = {
-      ...productData, // wholesalePrice and retailPrice are included here
+      ...productData,
       id: crypto.randomUUID(),
       timestamp: Date.now(),
     };
-    let productToReturn: Product | undefined;
-
+    
     setProducts((currentProducts) => {
       const updatedProducts = [...currentProducts, newProduct];
-      productToReturn = newProduct;
-
       if (isLowStock(newProduct)) {
         createLowStockNotification(newProduct);
       }
       return updatedProducts;
     });
-    return productToReturn!;
+    return newProduct;
   }, [createLowStockNotification]);
 
   const editProduct = useCallback((productId: string, updatedData: ProductFormData): Product | undefined => {
@@ -69,7 +66,7 @@ export function useProductsStorage() {
         if (product.id === productId) {
           productAfterUpdate = {
             ...product,
-            ...updatedData, // wholesalePrice and retailPrice are updated here
+            ...updatedData,
             timestamp: Date.now(),
           };
           return productAfterUpdate;
@@ -121,6 +118,11 @@ export function useProductsStorage() {
     return productToReturn;
   }, [createLowStockNotification]);
 
+  const deleteProduct = useCallback((productId: string) => {
+    setProducts((currentProducts) => currentProducts.filter(p => p.id !== productId));
+    deleteNotificationsByProductId(productId);
+  }, [deleteNotificationsByProductId]);
+
   const getProducts = useCallback((): Product[] => {
     return products;
   }, [products]);
@@ -138,5 +140,16 @@ export function useProductsStorage() {
     }
   }, []);
 
-  return { products, addProduct, editProduct, getProducts, decreaseProductQuantity, getProductById, clearAllProducts, isLoaded };
+  return { 
+    products, 
+    addProduct, 
+    editProduct, 
+    getProducts, 
+    decreaseProductQuantity, 
+    getProductById, 
+    deleteProduct,
+    clearAllProducts, 
+    isLoaded 
+  };
 }
+

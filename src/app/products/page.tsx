@@ -22,7 +22,7 @@ const filterLabels: Record<ProductFilter, string> = {
 };
 
 export default function ProductsListPage() {
-  const { products, editProduct, isLoaded } = useProductsStorage();
+  const { products, editProduct, deleteProduct, isLoaded } = useProductsStorage();
   const { toast } = useToast();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
@@ -54,6 +54,15 @@ export default function ProductsListPage() {
       });
     }
     handleCloseEditModal();
+  };
+
+  const handleDeleteProduct = (productToDelete: Product) => {
+    deleteProduct(productToDelete.id);
+    toast({
+      title: "نجاح",
+      description: `تم حذف المنتج "${productToDelete.name}" بنجاح.`,
+      variant: "default",
+    });
   };
 
   const productCounts = useMemo(() => {
@@ -111,7 +120,11 @@ export default function ProductsListPage() {
                 </Button>
               ))}
             </div>
-            <ProductsTable products={filteredProducts} onEditProduct={handleOpenEditModal} />
+            <ProductsTable 
+              products={filteredProducts} 
+              onEditProduct={handleOpenEditModal}
+              onDeleteProduct={handleDeleteProduct} 
+            />
           </CardContent>
         </Card>
       </main>
