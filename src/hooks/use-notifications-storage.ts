@@ -26,13 +26,15 @@ const NotificationActionTypes = {
   ADD: 'ADD_NOTIFICATION',
   MARK_READ: 'MARK_AS_READ',
   MARK_ALL_READ: 'MARK_ALL_AS_READ',
+  CLEAR_ALL: 'CLEAR_ALL_NOTIFICATIONS',
 } as const;
 
 type NotificationAction =
   | { type: typeof NotificationActionTypes.SET_LOADED; payload: Notification[] }
   | { type: typeof NotificationActionTypes.ADD; payload: { newNotification: Notification } }
   | { type: typeof NotificationActionTypes.MARK_READ; payload: { notificationId: string } }
-  | { type: typeof NotificationActionTypes.MARK_ALL_READ };
+  | { type: typeof NotificationActionTypes.MARK_ALL_READ }
+  | { type: typeof NotificationActionTypes.CLEAR_ALL };
 
 
 function pruneOldReadNotifications(notifications: Notification[]): Notification[] {
@@ -82,6 +84,11 @@ function notificationsReducer(state: NotificationsState, action: NotificationAct
         ...state,
         notifications: state.notifications.map((n) => ({ ...n, read: true })),
       };
+    case NotificationActionTypes.CLEAR_ALL:
+      return {
+        notifications: [],
+        isLoaded: state.isLoaded, // Keep isLoaded true, just clear the data
+      };
     default:
       return state;
   }
@@ -91,9 +98,13 @@ function dispatch(action: NotificationAction) {
   memoryState = notificationsReducer(memoryState, action);
   if (memoryState.isLoaded) {
     try {
-      localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(memoryState.notifications));
+      if (action.type === NotificationActionTypes.CLEAR_ALL) {
+        localStorage.removeItem(NOTIFICATIONS_STORAGE_KEY);
+      } else {
+        localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(memoryState.notifications));
+      }
     } catch (error) {
-      console.error("Failed to save notifications to localStorage:", error);
+      console.error("Failed to update notifications in localStorage:", error);
     }
   }
   queueMicrotask(() => {
@@ -158,8 +169,11 @@ export function useNotificationsStorage() {
   const markAllAsRead = useCallback(() => {
     dispatch({ type: NotificationActionTypes.MARK_ALL_READ });
   }, []);
+  
+  const clearAllNotifications = useCallback(() => {
+    dispatch({ type: NotificationActionTypes.CLEAR_ALL });
+  }, []);
 
-  // All notifications, already sorted by timestamp descending by the reducer
   const allSortedNotifications = useMemo(() => {
      return state.notifications;
   }, [state.notifications]);
@@ -171,10 +185,10 @@ export function useNotificationsStorage() {
 
   return {
     notifications: allSortedNotifications, 
-    // unreadNotifications, // No longer explicitly needed as we iterate allSortedNotifications and check .read
     addNotification,
     markAsRead,
     markAllAsRead,
+    clearAllNotifications,
     unreadCount,
     isLoaded: state.isLoaded,
   };

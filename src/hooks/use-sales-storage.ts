@@ -54,5 +54,14 @@ export function useSalesStorage() {
     return sales;
   }, [sales]);
 
-  return { sales, addSale, getSales, isSalesLoaded };
+  const clearAllSales = useCallback(() => {
+    setSales([]);
+    try {
+      localStorage.removeItem(SALES_STORAGE_KEY);
+    } catch (error) {
+      console.error("Failed to remove sales from localStorage:", error);
+    }
+  }, []);
+
+  return { sales, addSale, getSales, clearAllSales, isSalesLoaded };
 }

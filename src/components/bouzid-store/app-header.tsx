@@ -1,22 +1,43 @@
 
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Home, Archive, Menu, ClipboardList, Bell } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Home, Archive, Menu, ClipboardList, Bell, RotateCcw } from 'lucide-react';
 import { useNotificationsStorage } from '@/hooks/use-notifications-storage';
+import { useProductsStorage } from '@/hooks/use-products-storage';
+import { useSalesStorage } from '@/hooks/use-sales-storage';
+import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
 export function AppHeader() {
-  const { notifications, unreadCount, markAsRead, markAllAsRead, isLoaded: notificationsLoaded } = useNotificationsStorage();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, clearAllNotifications, isLoaded: notificationsLoaded } = useNotificationsStorage();
+  const { clearAllProducts } = useProductsStorage();
+  const { clearAllSales } = useSalesStorage();
+  const { toast } = useToast();
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
 
   const handleNotificationClick = (notificationId: string) => {
     markAsRead(notificationId);
-    // Navigation will occur via the Link component
+  };
+
+  const handleResetAllData = () => {
+    clearAllProducts();
+    clearAllSales();
+    clearAllNotifications();
+    toast({
+      title: "نجاح",
+      description: "تمت إعادة تعيين جميع بيانات التطبيق بنجاح.",
+      variant: "default",
+    });
+    setIsResetDialogOpen(false);
   };
 
   return (
@@ -28,7 +49,7 @@ export function AppHeader() {
 
         <div className="flex items-center gap-2">
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex gap-1 sm:gap-2">
+          <nav className="hidden md:flex gap-1 sm:gap-2 items-center">
             <Button asChild variant="ghost" className="text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground px-2 sm:px-3 py-2">
               <Link href="/">
                 <Home className="me-1 sm:me-2 h-5 w-5" />
@@ -47,6 +68,28 @@ export function AppHeader() {
                 سجل المبيعات
               </Link>
             </Button>
+             <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" className="text-primary-foreground hover:bg-red-500/90 hover:text-white px-2 sm:px-3 py-2">
+                  <RotateCcw className="me-1 sm:me-2 h-5 w-5" />
+                  إعادة تعيين
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent dir="rtl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>تأكيد إعادة التعيين</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    هل أنت متأكد أنك تريد إعادة تعيين جميع بيانات التطبيق؟ سيتم حذف جميع المنتجات والمبيعات والإشعارات بشكل دائم. لا يمكن التراجع عن هذا الإجراء.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleResetAllData} className={cn(buttonVariants({variant: "destructive"}))}>
+                    تأكيد وإعادة التعيين
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </nav>
 
           {/* Notifications Popover */}
@@ -67,7 +110,7 @@ export function AppHeader() {
                 <div className="p-4 border-b border-border">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold">الإشعارات</h3>
-                    {notifications.length > 0 && unreadCount > 0 && ( // Show button if there are notifications and some are unread
+                    {notifications.length > 0 && unreadCount > 0 && (
                        <Button variant="link" size="sm" onClick={markAllAsRead} className="text-primary p-0 h-auto">
                          تحديد الكل كمقروء
                        </Button>
@@ -86,9 +129,11 @@ export function AppHeader() {
                           onClick={() => handleNotificationClick(notification.id)}
                           className={cn(
                             "block p-3 hover:bg-muted/50",
-                            !notification.read && "bg-primary/10", // Highlight unread
+                            !notification.read && "bg-primary/10", 
                             !notification.href && "pointer-events-none" 
                           )}
+                          passHref={!notification.href} // passHref only if there is no href for legacy reasons, else modern Link handles it.
+                                                      // Actually, modern Link should always handle it. Removed passHref.
                         >
                           <p className={cn(
                               "text-sm",
@@ -107,14 +152,6 @@ export function AppHeader() {
                     </div>
                   )}
                 </ScrollArea>
-                 {/* Placeholder for a "View All Notifications" page link if needed in the future */}
-                 {/* {notifications.length > 0 && (
-                    <div className="p-2 text-center border-t border-border">
-                        <Link href="/notifications" passHref legacyBehavior>
-                             <Button variant="link" size="sm" className="text-primary">عرض كل الإشعارات</Button>
-                        </Link>
-                    </div>
-                 )} */}
               </PopoverContent>
             </Popover>
           )}
@@ -136,7 +173,7 @@ export function AppHeader() {
                     تصفح أقسام التطبيق المختلفة من هنا.
                   </SheetDescription>
                 </SheetHeader>
-                <div className="flex flex-col space-y-4">
+                <div className="flex flex-col space-y-2">
                   <SheetClose asChild>
                     <Button asChild variant="ghost" className="justify-start text-lg text-foreground hover:bg-accent hover:text-accent-foreground w-full">
                       <Link href="/">
@@ -161,6 +198,19 @@ export function AppHeader() {
                       </Link>
                     </Button>
                   </SheetClose>
+                  <div className="pt-4 mt-4 border-t border-border">
+                     <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+                        <AlertDialogTrigger asChild>
+                          <SheetClose asChild>
+                            <Button variant="ghost" className="justify-start text-lg text-destructive hover:bg-destructive/10 hover:text-destructive w-full">
+                              <RotateCcw className="me-3 h-5 w-5" />
+                              إعادة تعيين
+                            </Button>
+                          </SheetClose>
+                        </AlertDialogTrigger>
+                        {/* AlertDialogContent is defined above for desktop, it will be reused */}
+                      </AlertDialog>
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>

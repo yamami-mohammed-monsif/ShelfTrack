@@ -27,7 +27,7 @@ export function useProductsStorage() {
     if (isLoaded) {
       try {
         localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(products));
-      } catch (error) {
+      } catch (error)        {
         console.error("Failed to save products to localStorage:", error);
       }
     }
@@ -44,18 +44,23 @@ export function useProductsStorage() {
       id: crypto.randomUUID(),
       timestamp: Date.now(),
     };
-    setProducts((prevProducts) => [...prevProducts, newProduct]);
-    
-    // For newly added products, there's no "before" state of it being not low-stock.
-    // We just check if it's low-stock upon creation.
-    if (isLowStock(newProduct)) {
-      createLowStockNotification(newProduct);
-    }
-    return newProduct;
+    let productToReturn: Product | undefined;
+
+    setProducts((currentProducts) => {
+      const updatedProducts = [...currentProducts, newProduct];
+      productToReturn = newProduct; // Capture for return
+
+      // For newly added products, check if it's low-stock upon creation.
+      if (isLowStock(newProduct)) {
+        createLowStockNotification(newProduct);
+      }
+      return updatedProducts;
+    });
+    return productToReturn!;
   }, [createLowStockNotification]);
 
   const editProduct = useCallback((productId: string, updatedData: ProductFormData): Product | undefined => {
-    let returnedProduct: Product | undefined;
+    let productToReturn: Product | undefined;
 
     setProducts((currentProducts) => {
       const productBeforeUpdate = currentProducts.find(p => p.id === productId);
@@ -63,18 +68,16 @@ export function useProductsStorage() {
 
       const newProducts = currentProducts.map((product) => {
         if (product.id === productId) {
-          const updatedProductInstance = {
+          productAfterUpdate = {
             ...product,
             ...updatedData,
             timestamp: Date.now(),
           };
-          productAfterUpdate = updatedProductInstance; // Capture the state after update
-          return updatedProductInstance;
+          return productAfterUpdate;
         }
         return product;
       });
 
-      // Perform check and notify from within the updater
       if (productAfterUpdate && productBeforeUpdate) {
         const wasPreviouslyLow = wasLowStock(productBeforeUpdate.type, productBeforeUpdate.quantity);
         const isNowLow = isLowStock(productAfterUpdate);
@@ -82,34 +85,30 @@ export function useProductsStorage() {
           createLowStockNotification(productAfterUpdate);
         }
       }
-      returnedProduct = productAfterUpdate; // Assign for return
+      productToReturn = productAfterUpdate;
       return newProducts;
     });
-    
-    return returnedProduct; // Returns the product state captured during this update cycle
+    return productToReturn;
   }, [createLowStockNotification]);
 
   const decreaseProductQuantity = useCallback((productId: string, quantityToDecrease: number): Product | undefined => {
-    let returnedProduct: Product | undefined;
-
+    let productToReturn: Product | undefined;
     setProducts((currentProducts) => {
       const productBeforeUpdate = currentProducts.find(p => p.id === productId);
       let productAfterUpdate: Product | undefined;
 
       const newProducts = currentProducts.map((product) => {
         if (product.id === productId) {
-          const updatedProductInstance = {
+          productAfterUpdate = {
             ...product,
             quantity: Math.max(0, product.quantity - quantityToDecrease),
             timestamp: Date.now(),
           };
-          productAfterUpdate = updatedProductInstance; // Capture the state after update
-          return updatedProductInstance;
+          return productAfterUpdate;
         }
         return product;
       });
 
-      // Perform check and notify from within the updater
       if (productAfterUpdate && productBeforeUpdate) {
         const wasPreviouslyLow = wasLowStock(productBeforeUpdate.type, productBeforeUpdate.quantity);
         const isNowLow = isLowStock(productAfterUpdate);
@@ -117,11 +116,10 @@ export function useProductsStorage() {
           createLowStockNotification(productAfterUpdate);
         }
       }
-      returnedProduct = productAfterUpdate; // Assign for return
+      productToReturn = productAfterUpdate;
       return newProducts;
     });
-
-    return returnedProduct; // Returns the product state captured during this update cycle
+    return productToReturn;
   }, [createLowStockNotification]);
 
   const getProducts = useCallback((): Product[] => {
@@ -132,5 +130,14 @@ export function useProductsStorage() {
     return products.find(p => p.id === productId);
   }, [products]);
 
-  return { products, addProduct, editProduct, getProducts, decreaseProductQuantity, getProductById, isLoaded };
+  const clearAllProducts = useCallback(() => {
+    setProducts([]);
+    try {
+      localStorage.removeItem(PRODUCTS_STORAGE_KEY);
+    } catch (error) {
+      console.error("Failed to remove products from localStorage:", error);
+    }
+  }, []);
+
+  return { products, addProduct, editProduct, getProducts, decreaseProductQuantity, getProductById, clearAllProducts, isLoaded };
 }
