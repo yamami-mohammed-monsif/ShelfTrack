@@ -12,8 +12,9 @@ import { useSalesStorage } from '@/hooks/use-sales-storage';
 import { isLowStock } from '@/lib/product-utils';
 import {
   startOfDay, endOfDay,
+  startOfWeek, endOfWeek,
   isWithinInterval,
-  isSameDay, // Import isSameDay
+  isSameDay, 
 } from 'date-fns';
 // import { arSA } from 'date-fns/locale'; // arSA not strictly needed for interval checks unless week starts on different day
 import { cn } from '@/lib/utils';
@@ -31,9 +32,9 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
     const intervalId = setInterval(() => {
       const newCurrentDate = new Date();
       if (!isSameDay(todayRefDate, newCurrentDate)) {
-        setTodayRefDate(newCurrentDate); // Update the reference date if the day has changed
+        setTodayRefDate(newCurrentDate); 
       }
-    }, 60000); // Check every minute
+    }, 60000); 
 
     return () => clearInterval(intervalId);
   }, [todayRefDate]);
@@ -44,8 +45,8 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
       todayProfit: 0,
     };
 
-    const todayStart = startOfDay(todayRefDate); // Use todayRefDate for current day's start
-    const todayEnd = endOfDay(todayRefDate);     // Use todayRefDate for current day's end
+    const todayStart = startOfDay(todayRefDate); 
+    const todayEnd = endOfDay(todayRefDate);     
     
     const salesToday = sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: todayStart, end: todayEnd }));
 
@@ -59,7 +60,7 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
       todaySalesValue,
       todayProfit,
     };
-  }, [sales, isSalesLoaded, todayRefDate]); // Add todayRefDate as a dependency
+  }, [sales, isSalesLoaded, todayRefDate]); 
 
   const totalProductsInStock = products.length;
   const lowStockProductsCount = useMemo(() => products.filter(p => isLowStock(p)).length, [products]);
@@ -79,7 +80,7 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 space-y-8">
+    <div className="py-8 px-4 space-y-8"> {/* Removed container mx-auto */}
       <div className="grid gap-6 grid-cols-2 md:grid-cols-2"> 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
