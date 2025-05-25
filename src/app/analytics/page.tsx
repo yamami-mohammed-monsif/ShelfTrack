@@ -113,7 +113,7 @@ export default function SalesAnalyticsPage() {
       }
       case 'monthly': { // Current calendar month, day-by-day (up to today)
         const monthStart = startOfMonth(now);
-        const monthActualEnd = min(now, endOfMonth(now)); // Data up to today or end of month if past
+        const monthActualEnd = min([now, endOfMonth(now)]); // Data up to today or end of month if past
         const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthActualEnd });
         
         aggregatedData = daysInMonth.map(day => {
@@ -301,3 +301,4 @@ export default function SalesAnalyticsPage() {
     </div>
   );
 }
+
