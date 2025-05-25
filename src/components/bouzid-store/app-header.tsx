@@ -103,93 +103,83 @@ export function AppHeader() {
         </Link>
 
         <div className="flex items-center gap-2">
-          {/* Desktop Actions */}
-          <div className="hidden md:flex gap-1 sm:gap-2 items-center">
-            {notificationsLoaded && (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground">
-                    <Bell className="h-5 w-5" />
-                    {unreadCount > 0 && (
-                      <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
-                        {unreadCount}
-                      </span>
+          {/* Notification Bell - Visible on all screens */}
+          {notificationsLoaded && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground">
+                  <Bell className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                      {unreadCount}
+                    </span>
+                  )}
+                  <span className="sr-only">فتح الإشعارات</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-[calc(100vw-2rem)] md:w-96 p-0 bg-card text-card-foreground"
+                align="end"
+              >
+                <div className="p-4 border-b border-border">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-semibold">الإشعارات</h3>
+                    {notifications.length > 0 && unreadCount > 0 && (
+                       <Button variant="link" size="sm" onClick={markAllAsRead} className="text-primary p-0 h-auto">
+                         تحديد الكل كمقروء
+                       </Button>
                     )}
-                    <span className="sr-only">فتح الإشعارات</span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent 
-                  className="w-[calc(100vw-2rem)] md:w-96 p-0 bg-card text-card-foreground" 
-                  align="end"
-                >
-                  <div className="p-4 border-b border-border">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-lg font-semibold">الإشعارات</h3>
-                      {notifications.length > 0 && unreadCount > 0 && (
-                         <Button variant="link" size="sm" onClick={markAllAsRead} className="text-primary p-0 h-auto">
-                           تحديد الكل كمقروء
-                         </Button>
-                      )}
-                    </div>
                   </div>
-                  <ScrollArea className="h-[300px]">
-                    {notifications.length === 0 ? (
-                      <p className="text-muted-foreground text-center p-4">لا توجد إشعارات.</p>
-                    ) : (
-                      <div className="divide-y divide-border">
-                        {notifications.map((notification: Notification) => (
-                          <Link
-                            key={notification.id}
-                            href={notification.href || '#'}
-                            onClick={(e) => {
-                              if (!notification.href) e.preventDefault();
-                              handleNotificationClick(notification.id);
-                            }}
-                            className={cn(
-                              "block p-3 hover:bg-muted/50",
-                              !notification.read && "bg-primary/10", 
-                              !notification.href && "cursor-default" 
-                            )}
-                          >
-                            <p className={cn(
-                                "text-sm",
-                                !notification.read ? "font-semibold text-foreground" : "text-muted-foreground"
-                            )}>
-                              {notification.message}
-                            </p>
-                            <p className={cn(
-                                "text-xs",
-                                !notification.read ? "text-primary" : "text-muted-foreground/80"
-                            )}>
-                              {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true, locale: arSA })}
-                            </p>
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </ScrollArea>
-                   {notifications.length > 0 && (
-                    <div className="p-2 text-center border-t border-border">
-                        <Button variant="link" size="sm" asChild className="text-primary">
-                            <Link href="#">عرض كل الإشعارات</Link> 
-                        </Button>
+                </div>
+                <ScrollArea className="h-[300px]">
+                  {notifications.length === 0 ? (
+                    <p className="text-muted-foreground text-center p-4">لا توجد إشعارات.</p>
+                  ) : (
+                    <div className="divide-y divide-border">
+                      {notifications.map((notification: Notification) => (
+                        <Link
+                          key={notification.id}
+                          href={notification.href || '#'}
+                          onClick={(e) => {
+                            if (!notification.href) e.preventDefault();
+                            handleNotificationClick(notification.id);
+                          }}
+                          className={cn(
+                            "block p-3 hover:bg-muted/50",
+                            !notification.read && "bg-primary/10",
+                            !notification.href && "cursor-default pointer-events-none"
+                          )}
+                        >
+                          <p className={cn(
+                              "text-sm",
+                              !notification.read ? "font-semibold text-foreground" : "text-muted-foreground"
+                          )}>
+                            {notification.message}
+                          </p>
+                          <p className={cn(
+                              "text-xs",
+                              !notification.read ? "text-primary" : "text-muted-foreground/80"
+                          )}>
+                            {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true, locale: arSA })}
+                          </p>
+                        </Link>
+                      ))}
                     </div>
                   )}
-                </PopoverContent>
-              </Popover>
-            )}
+                </ScrollArea>
+                 {notifications.length > 0 && (
+                  <div className="p-2 text-center border-t border-border">
+                      <Button variant="link" size="sm" asChild className="text-primary">
+                          <Link href="#">عرض كل الإشعارات</Link>
+                      </Button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+          )}
 
-            {/* Export Data button removed from here for desktop view */}
-            {/* <Button 
-                variant="ghost" 
-                onClick={handleDownloadData} 
-                className="text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground px-2 sm:px-3 py-2"
-                aria-label="تصدير البيانات"
-              >
-                <Download className="me-1 sm:me-2 h-5 w-5" />
-                تصدير البيانات
-            </Button> */}
-
+          {/* Desktop-only Reset Button */}
+          <div className="hidden md:flex items-center">
             <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
               <AlertDialogTrigger asChild>
                 <Button variant="ghost" className="text-primary-foreground hover:bg-red-500/90 hover:text-white px-2 sm:px-3 py-2">
@@ -273,20 +263,20 @@ export function AppHeader() {
                   </SheetClose>
 
                   <div className="pt-4 mt-4 border-t border-border">
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         onClick={handleDownloadData} // Export Data button in mobile menu
                         className="justify-start text-lg text-foreground hover:bg-accent hover:text-accent-foreground w-full"
                       >
                         <Download className="me-3 h-5 w-5" />
                         تصدير البيانات
                       </Button>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         onClick={() => {
                           setIsMobileMenuOpen(false);
                           setIsResetDialogOpen(true);
-                        }} 
+                        }}
                         className="justify-start text-lg text-destructive hover:bg-destructive/10 hover:text-destructive w-full"
                       >
                         <RotateCcw className="me-3 h-5 w-5" />
@@ -302,3 +292,4 @@ export function AppHeader() {
     </header>
   );
 }
+
