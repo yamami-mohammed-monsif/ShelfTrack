@@ -59,3 +59,10 @@ export interface Notification {
   href?: string; // Optional link for the notification (e.g., to product page)
 }
 
+export interface BackupLogEntry {
+  id: string;
+  timestamp: number; // When the backup was made
+  periodStart: number; // Timestamp for the start of the backup period (e.g., start of the week)
+  periodEnd: number;   // Timestamp for the end of the backup period (e.g., end of the week)
+  fileName: string;
+}

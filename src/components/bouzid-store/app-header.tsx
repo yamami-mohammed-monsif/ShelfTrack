@@ -1,31 +1,32 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Menu, Bell, RotateCcw, Home, Archive, ClipboardList, LineChart as LineChartIcon } from 'lucide-react'; // Added Home, Archive etc for mobile sheet
+import { Menu, Bell, RotateCcw, Home, Archive, ClipboardList, LineChart as LineChartIcon, Download, History } from 'lucide-react';
 import { useNotificationsStorage } from '@/hooks/use-notifications-storage';
 import { useProductsStorage } from '@/hooks/use-products-storage';
 import { useSalesStorage } from '@/hooks/use-sales-storage';
+import { useBackupLogStorage } from '@/hooks/use-backup-log-storage';
 import { useToast } from '@/hooks/use-toast';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, startOfWeek, endOfWeek, format as formatDateFns } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import type { Notification } from '@/lib/types';
+import type { Notification, Product, Sale } from '@/lib/types';
 
 export function AppHeader() {
-  const { notifications, unreadCount, markAsRead, markAllAsRead, isLoaded: notificationsLoaded } = useNotificationsStorage();
-  const { clearAllProducts } = useProductsStorage();
-  const { clearAllSales } = useSalesStorage();
-  const { clearAllNotifications: clearAllNotificationData } = useNotificationsStorage(); // Renamed to avoid conflict
+  const { notifications, unreadCount, markAsRead, markAllAsRead, isLoaded: notificationsLoaded, clearAllNotifications: clearAllNotificationData } = useNotificationsStorage();
+  const { products, clearAllProducts } = useProductsStorage();
+  const { sales, clearAllSales } = useSalesStorage();
+  const { addLogEntry: addBackupLogEntry, clearAllBackupLogs } = useBackupLogStorage();
   const { toast } = useToast();
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // To control sheet state for reset dialog
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleNotificationClick = (notificationId: string) => {
     markAsRead(notificationId);
@@ -35,14 +36,64 @@ export function AppHeader() {
     clearAllProducts();
     clearAllSales();
     clearAllNotificationData();
+    clearAllBackupLogs(); // Also clear backup logs
     toast({
       title: "نجاح",
       description: "تمت إعادة تعيين جميع بيانات التطبيق بنجاح.",
       variant: "default",
     });
     setIsResetDialogOpen(false);
-    setIsMobileMenuOpen(false); // Close mobile menu if reset was triggered from there
+    setIsMobileMenuOpen(false);
   };
+
+  const handleDownloadData = () => {
+    const now = new Date();
+    const weekStart = startOfWeek(now, { locale: arSA, weekStartsOn: 6 }); // Saturday
+    const weekEnd = endOfWeek(now, { locale: arSA, weekStartsOn: 6 }); // Friday
+
+    const formattedStartDate = formatDateFns(weekStart, 'yyyy-MM-dd');
+    const formattedEndDate = formatDateFns(weekEnd, 'yyyy-MM-dd');
+    const fileName = `data-backup_${formattedStartDate}_to_${formattedEndDate}.json`;
+
+    const dataToBackup = {
+      metadata: {
+        downloadedAt: now.toISOString(),
+        periodStart: weekStart.toISOString(),
+        periodEnd: weekEnd.toISOString(),
+        fileName: fileName,
+      },
+      products: products,
+      sales: sales,
+      notifications: notifications,
+    };
+
+    const jsonString = JSON.stringify(dataToBackup, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    addBackupLogEntry({
+      id: crypto.randomUUID(),
+      timestamp: Date.now(),
+      periodStart: weekStart.getTime(),
+      periodEnd: weekEnd.getTime(),
+      fileName: fileName,
+    });
+
+    toast({
+      title: "نجاح",
+      description: `تم تصدير البيانات بنجاح إلى الملف: ${fileName}`,
+      variant: "default",
+    });
+    setIsMobileMenuOpen(false); // Close mobile menu if export was triggered from there
+  };
+
 
   return (
     <header className="bg-primary text-primary-foreground p-4 shadow-md sticky top-0 z-50">
@@ -52,9 +103,8 @@ export function AppHeader() {
         </Link>
 
         <div className="flex items-center gap-2">
-          {/* Desktop Actions (Notifications, Reset) */}
+          {/* Desktop Actions */}
           <div className="hidden md:flex gap-1 sm:gap-2 items-center">
-            {/* Notifications Popover */}
             {notificationsLoaded && (
               <Popover>
                 <PopoverTrigger asChild>
@@ -122,7 +172,17 @@ export function AppHeader() {
               </Popover>
             )}
 
-             <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+            <Button 
+                variant="ghost" 
+                onClick={handleDownloadData} 
+                className="text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground px-2 sm:px-3 py-2"
+                aria-label="تصدير البيانات"
+              >
+                <Download className="me-1 sm:me-2 h-5 w-5" />
+                تصدير البيانات
+            </Button>
+
+            <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
               <AlertDialogTrigger asChild>
                 <Button variant="ghost" className="text-primary-foreground hover:bg-red-500/90 hover:text-white px-2 sm:px-3 py-2">
                   <RotateCcw className="me-1 sm:me-2 h-5 w-5" />
@@ -133,7 +193,7 @@ export function AppHeader() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>تأكيد إعادة التعيين</AlertDialogTitle>
                   <AlertDialogDescription>
-                    هل أنت متأكد أنك تريد إعادة تعيين جميع بيانات التطبيق؟ سيتم حذف جميع المنتجات والمبيعات والإشعارات بشكل دائم. لا يمكن التراجع عن هذا الإجراء.
+                    هل أنت متأكد أنك تريد إعادة تعيين جميع بيانات التطبيق؟ سيتم حذف جميع المنتجات والمبيعات والإشعارات وسجل النسخ بشكل دائم. لا يمكن التراجع عن هذا الإجراء.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -195,13 +255,29 @@ export function AppHeader() {
                       </Link>
                     </Button>
                   </SheetClose>
+                  <SheetClose asChild>
+                    <Button asChild variant="ghost" className="justify-start text-lg text-foreground hover:bg-accent hover:text-accent-foreground w-full">
+                      <Link href="/backup-log">
+                        <History className="me-3 h-5 w-5" />
+                        سجل النسخ
+                      </Link>
+                    </Button>
+                  </SheetClose>
+
                   <div className="pt-4 mt-4 border-t border-border">
-                     {/* For mobile reset, trigger the same dialog */}
+                      <Button 
+                        variant="ghost" 
+                        onClick={handleDownloadData} 
+                        className="justify-start text-lg text-foreground hover:bg-accent hover:text-accent-foreground w-full"
+                      >
+                        <Download className="me-3 h-5 w-5" />
+                        تصدير البيانات
+                      </Button>
                       <Button 
                         variant="ghost" 
                         onClick={() => {
-                          setIsMobileMenuOpen(false); // Close sheet first
-                          setIsResetDialogOpen(true); // Then open dialog
+                          setIsMobileMenuOpen(false);
+                          setIsResetDialogOpen(true);
                         }} 
                         className="justify-start text-lg text-destructive hover:bg-destructive/10 hover:text-destructive w-full"
                       >
@@ -218,3 +294,5 @@ export function AppHeader() {
     </header>
   );
 }
+
+  
