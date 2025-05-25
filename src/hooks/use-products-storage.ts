@@ -33,14 +33,12 @@ const ProductActionTypes = {
 type ProductAction =
   | { type: typeof ProductActionTypes.SET_LOADED; payload: Product[] }
   | { type: typeof ProductActionTypes.ADD; payload: { newProduct: Product } }
-  | { type: typeof ProductActionTypes.EDIT; payload: { productId: string; updatedData: ProductFormData } }
-  | { type: typeof ProductActionTypes.DECREASE_QUANTITY; payload: { productId: string; quantityToDecrease: number } }
+  | { type: typeof ProductActionTypes.EDIT; payload: { productId: string; updatedData: ProductFormData; productBeforeUpdate: Product } }
+  | { type: typeof ProductActionTypes.DECREASE_QUANTITY; payload: { productId: string; quantityToDecrease: number; productBeforeUpdate: Product } }
   | { type: typeof ProductActionTypes.DELETE; payload: { productId: string } }
   | { type: typeof ProductActionTypes.CLEAR_ALL };
 
-// This function will be defined outside the hook and passed to dispatch
-// It needs access to `addNotification` from `useNotificationsStorage`
-// We'll pass `createLowStockNotificationImpl` to dispatch for actions that might trigger it.
+
 const createLowStockNotificationCallback = (
   product: Product,
   addNotification: (message: string, productId?: string, href?: string) => void
@@ -53,7 +51,6 @@ const createLowStockNotificationCallback = (
 function productsReducer(
   state: ProductsState,
   action: ProductAction,
-  // Pass the actual addNotification function for use inside the reducer for relevant actions
   createLowStockNotificationFn?: (product: Product) => void
 ): ProductsState {
   switch (action.type) {
@@ -72,7 +69,7 @@ function productsReducer(
     }
     case ProductActionTypes.EDIT: {
       let productAfterUpdate: Product | undefined;
-      const productBeforeUpdate = state.products.find(p => p.id === action.payload.productId);
+      const { productBeforeUpdate } = action.payload;
       
       const newProducts = state.products.map((product) => {
         if (product.id === action.payload.productId) {
@@ -97,7 +94,7 @@ function productsReducer(
     }
     case ProductActionTypes.DECREASE_QUANTITY: {
       let productAfterUpdate: Product | undefined;
-      const productBeforeUpdate = state.products.find(p => p.id === action.payload.productId);
+      const { productBeforeUpdate } = action.payload;
 
       const newProducts = state.products.map((product) => {
         if (product.id === action.payload.productId) {
@@ -135,7 +132,6 @@ function productsReducer(
   }
 }
 
-// addNotificationFn will be bound to the specific instance of useNotificationsStorage().addNotification
 function dispatch(action: ProductAction, addNotificationFn?: (message: string, productId?: string, href?: string) => void, deleteNotificationsByProductIdFn?: (productId: string) => void) {
   const createLowStockNotificationForReducer = addNotificationFn 
     ? (product: Product) => createLowStockNotificationCallback(product, addNotificationFn)
@@ -149,7 +145,6 @@ function dispatch(action: ProductAction, addNotificationFn?: (message: string, p
   if (action.type === ProductActionTypes.CLEAR_ALL && deleteNotificationsByProductIdFn) {
     // This is tricky, if we clear all products, we should ideally clear all product-related notifications
     // For now, let's assume this implies clearing all notifications, handled by the AppHeader's reset.
-    // If more granular control is needed, this would need adjustment.
   }
 
   if (memoryState.isLoaded) {
@@ -174,6 +169,11 @@ export function useProductsStorage() {
   const [state, setState] = useState<ProductsState>(memoryState);
   const { addNotification, deleteNotificationsByProductId } = useNotificationsStorage();
 
+  const createLowStockNotification = useCallback((product: Product) => {
+    const message = `"${product.name}" أوشك على النفاد. الكمية المتبقية: ${product.quantity.toLocaleString()} ${unitSuffix[product.type]}.`;
+    addNotification(message, product.id, `/products/${product.id}`);
+  }, [addNotification]);
+
   useEffect(() => {
     if (!memoryState.isLoaded) {
       let initialProducts: Product[] = [];
@@ -185,9 +185,6 @@ export function useProductsStorage() {
       } catch (error) {
         console.error("Failed to load products from localStorage:", error);
       }
-      // Pass addNotification here for initial load checks if any product is already low stock
-      // However, notifications for existing low-stock items on load might be too noisy.
-      // Typically, notifications are for *changes*. Let's omit createLowStock for SET_LOADED.
       dispatch({ type: ProductActionTypes.SET_LOADED, payload: initialProducts });
     }
     
@@ -204,10 +201,19 @@ export function useProductsStorage() {
         listeners.splice(index, 1);
       }
     };
-  }, [state.isLoaded]); // addNotification, deleteNotificationsByProductId are stable due to their own hook's listener pattern
+  }, [state.isLoaded]); 
 
 
-  const addProduct = useCallback((productData: ProductFormData): Product => {
+  const addProduct = useCallback((productData: ProductFormData): Product | null => {
+    // Check for duplicates: same name (case-insensitive) and same type
+    const existingProduct = memoryState.products.find(
+      p => p.name.toLowerCase() === productData.name.toLowerCase() && p.type === productData.type
+    );
+
+    if (existingProduct) {
+      return null; // Indicate duplicate found, product not added
+    }
+
     const newProduct: Product = {
       ...productData,
       id: crypto.randomUUID(),
@@ -218,15 +224,18 @@ export function useProductsStorage() {
   }, [addNotification]);
 
   const editProduct = useCallback((productId: string, updatedData: ProductFormData): Product | undefined => {
-    dispatch({ type: ProductActionTypes.EDIT, payload: { productId, updatedData } }, addNotification);
-    // The actual return of the edited product now happens via state update.
-    // To get the product immediately, one would need to find it in memoryState.products after dispatch,
-    // but typically UI updates based on the new state.
+    const productBeforeUpdate = memoryState.products.find(p => p.id === productId);
+    if (!productBeforeUpdate) return undefined;
+
+    dispatch({ type: ProductActionTypes.EDIT, payload: { productId, updatedData, productBeforeUpdate } }, addNotification);
     return memoryState.products.find(p => p.id === productId);
   }, [addNotification]);
 
   const decreaseProductQuantity = useCallback((productId: string, quantityToDecrease: number): Product | undefined => {
-    dispatch({ type: ProductActionTypes.DECREASE_QUANTITY, payload: { productId, quantityToDecrease } }, addNotification);
+    const productBeforeUpdate = memoryState.products.find(p => p.id === productId);
+    if (!productBeforeUpdate) return undefined;
+
+    dispatch({ type: ProductActionTypes.DECREASE_QUANTITY, payload: { productId, quantityToDecrease, productBeforeUpdate } }, addNotification);
     return memoryState.products.find(p => p.id === productId);
   }, [addNotification]);
 
@@ -239,14 +248,11 @@ export function useProductsStorage() {
   }, [state.products]);
 
   const clearAllProducts = useCallback(() => {
-    // For clearing all, we might also want to clear related notifications.
-    // This is a bit complex as it would require iterating or a general "clear product notifications"
-    // The reset in AppHeader already calls clearAllNotifications.
     dispatch({ type: ProductActionTypes.CLEAR_ALL });
   }, []);
   
   const sortedProducts = useMemo(() => {
-    return state.products; // Reducer already sorts
+    return state.products; 
   }, [state.products]);
 
   return { 
@@ -260,3 +266,4 @@ export function useProductsStorage() {
     isLoaded: state.isLoaded 
   };
 }
+

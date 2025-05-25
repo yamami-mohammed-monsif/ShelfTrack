@@ -18,22 +18,31 @@ export default function BouzidStorePage() {
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
   const [isRecordSaleModalOpen, setIsRecordSaleModalOpen] = useState(false);
   
-  const { products, addProduct, decreaseProductQuantity, isLoaded: productsLoaded } = useProductsStorage();
-  const { addSale, isSalesLoaded } = useSalesStorage();
+  const productsHook = useProductsStorage(); // Renamed for clarity
+  const salesHook = useSalesStorage(); // Renamed for clarity
   const { toast } = useToast();
 
   const handleAddProduct = (data: ProductFormData) => {
-    const newProduct = addProduct(data);
-    toast({
-      title: "نجاح",
-      description: `تمت إضافة المنتج "${newProduct.name}" بنجاح.`,
-      variant: "default",
-    });
-    console.log('New product added:', newProduct);
+    const newProduct = productsHook.addProduct(data);
+    if (newProduct) {
+      toast({
+        title: "نجاح",
+        description: `تمت إضافة المنتج "${newProduct.name}" بنجاح.`,
+        variant: "default",
+      });
+      console.log('New product added:', newProduct);
+    } else {
+      // Duplicate product was detected by the hook
+      toast({
+        title: "خطأ",
+        description: `المنتج "${data.name}" موجود بالفعل في المخزون.`,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleRecordSale = (productId: string, quantitySold: number, saleTimestamp: number) => {
-    const productSold = products.find(p => p.id === productId);
+    const productSold = productsHook.products.find(p => p.id === productId);
     if (!productSold) {
       toast({
         title: "خطأ",
@@ -43,8 +52,8 @@ export default function BouzidStorePage() {
       return;
     }
 
-    const recordedSale = addSale(productSold, quantitySold, saleTimestamp);
-    decreaseProductQuantity(productId, quantitySold);
+    const recordedSale = salesHook.addSale(productSold, quantitySold, saleTimestamp);
+    productsHook.decreaseProductQuantity(productId, quantitySold);
     
     toast({
       title: "نجاح",
@@ -55,7 +64,7 @@ export default function BouzidStorePage() {
   };
 
 
-  if (!productsLoaded || !isSalesLoaded) {
+  if (!productsHook.isLoaded || !salesHook.isSalesLoaded) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <p className="text-foreground text-xl">جار التحميل...</p>
@@ -67,7 +76,7 @@ export default function BouzidStorePage() {
     <div className="flex flex-col min-h-screen bg-background">
       <AppHeader />
       <main className="flex-grow pb-28"> {/* Add padding-bottom to avoid overlap with fixed footer buttons */}
-        <SalesDashboard products={products} />
+        <SalesDashboard products={productsHook.products} />
       </main>
       
       {/* Fixed Footer Buttons */}
@@ -101,8 +110,9 @@ export default function BouzidStorePage() {
         isOpen={isRecordSaleModalOpen}
         onClose={() => setIsRecordSaleModalOpen(false)}
         onRecordSale={handleRecordSale}
-        products={products}
+        products={productsHook.products}
       />
     </div>
   );
 }
+
