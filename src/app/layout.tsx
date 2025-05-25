@@ -42,7 +42,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}>
         <AppHeader /> {/* AppHeader is now global and full-width */}
         <SidebarProvider defaultOpen={false}> {/* Sidebar is collapsed by default on desktop */}
-          <div className="flex min-h-screen"> {/* This div is the main container for sidebar + content area */}
+          <div className="flex min-h-screen w-full"> {/* This div is the main container for sidebar + content area */}
             {/* Desktop Sidebar: Shown only on md and larger, on the right */}
             <Sidebar
               side="right"
@@ -50,8 +50,8 @@ export default function RootLayout({
               className="hidden md:flex flex-col border-l bg-sidebar text-sidebar-foreground"
             >
               <SidebarRail /> {/* Allows clicking the edge to toggle expand/collapse */}
-              {/* SidebarContent already has pt-16, accounting for the AppHeader's height */}
-              <SidebarContent className="flex-grow p-2 pt-16 overflow-y-auto">
+              {/* SidebarContent padding adjusted to push icons down from the header */}
+              <SidebarContent className="flex-grow p-2 pt-20 overflow-y-auto">
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <Link href="/" legacyBehavior passHref>
