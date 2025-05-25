@@ -7,12 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { SalesTable } from '@/components/bouzid-store/sales-table';
 import type { Product } from '@/lib/types';
-import { DollarSign, ShoppingCart, Package, AlertTriangle, List, ArrowLeft, TrendingUp } from 'lucide-react';
+import { DollarSign, TrendingUp, Package, AlertTriangle, List, ArrowLeft } from 'lucide-react';
 import { useSalesStorage } from '@/hooks/use-sales-storage';
 import { isLowStock } from '@/lib/product-utils';
 import {
   startOfDay, endOfDay,
-  startOfWeek, endOfWeek,
   isWithinInterval,
   isSameDay, 
 } from 'date-fns';
@@ -80,8 +79,8 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
   }
 
   return (
-    <div className="py-8 px-4 space-y-8"> {/* Removed container mx-auto */}
-      <div className="grid gap-6 grid-cols-2 md:grid-cols-2"> 
+    <div className="py-8 px-4 space-y-8">
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2"> 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">مبيعات اليوم</CardTitle>
@@ -163,4 +162,3 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
     </div>
   );
 }
-
