@@ -1,7 +1,8 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation'; // Import useSearchParams
 import { AppHeader } from '@/components/bouzid-store/app-header';
 import { ProductsTable } from '@/components/bouzid-store/products-table';
 import { EditProductModal } from '@/components/bouzid-store/edit-product-modal';
@@ -11,7 +12,7 @@ import type { Product, ProductFormData, ProductType } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Package, Filter } from 'lucide-react';
-import { isLowStock } from '@/lib/product-utils'; // Import isLowStock
+import { isLowStock } from '@/lib/product-utils';
 
 type ProductFilter = 'all' | ProductType | 'low-stock';
 
@@ -26,9 +27,18 @@ const filterLabels: Record<ProductFilter, string> = {
 export default function ProductsListPage() {
   const { products, editProduct, deleteProduct, isLoaded } = useProductsStorage();
   const { toast } = useToast();
+  const searchParams = useSearchParams(); // Get search params
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [activeFilter, setActiveFilter] = useState<ProductFilter>('all');
+
+  useEffect(() => {
+    const filterFromQuery = searchParams.get('filter');
+    if (filterFromQuery && Object.keys(filterLabels).includes(filterFromQuery) && filterFromQuery !== activeFilter) {
+      setActiveFilter(filterFromQuery as ProductFilter);
+    }
+  }, [searchParams, activeFilter]); // Rerun when searchParams or activeFilter change
 
   const handleOpenEditModal = (product: Product) => {
     setProductToEdit(product);
@@ -73,7 +83,7 @@ export default function ProductsListPage() {
       powder: products.filter(p => p.type === 'powder').length,
       liquid: products.filter(p => p.type === 'liquid').length,
       unit: products.filter(p => p.type === 'unit').length,
-      'low-stock': products.filter(p => isLowStock(p)).length, // Calculate low stock count
+      'low-stock': products.filter(p => isLowStock(p)).length,
     };
   }, [products]);
 
@@ -120,7 +130,7 @@ export default function ProductsListPage() {
                   variant={activeFilter === filterKey ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setActiveFilter(filterKey)}
-                  className="px-3 py-1 h-auto m-1" // Added margin for better spacing on wrap
+                  className="px-3 py-1 h-auto m-1"
                 >
                   {filterLabels[filterKey]} ({productCounts[filterKey]})
                 </Button>

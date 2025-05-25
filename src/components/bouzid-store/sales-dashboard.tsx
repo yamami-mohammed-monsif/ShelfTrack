@@ -12,10 +12,9 @@ import { useSalesStorage } from '@/hooks/use-sales-storage';
 import { isLowStock } from '@/lib/product-utils';
 import {
   startOfDay, endOfDay,
-  startOfWeek, endOfWeek, // For weekly calculations
   isWithinInterval,
 } from 'date-fns';
-import { arSA } from 'date-fns/locale';
+// import { arSA } from 'date-fns/locale'; // arSA not strictly needed for interval checks unless week starts on different day
 import { cn } from '@/lib/utils';
 
 interface SalesDashboardProps {
@@ -99,26 +98,31 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
           </CardContent>
         </Card>
         
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">عدد المنتجات</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalProductsInStock}</div>
-            <p className="text-xs text-muted-foreground">إجمالي المنتجات المتوفرة في المخزون</p>
-          </CardContent>
-        </Card>
-         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">منتجات منخفضة المخزون</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{lowStockProductsCount}</div>
-            <p className="text-xs text-muted-foreground">عدد المنتجات التي مخزونها منخفض</p>
-          </CardContent>
-        </Card>
+        <Link href="/products?filter=all" className="block cursor-pointer group">
+          <Card className="transition-colors group-hover:bg-muted/30 group-hover:border-primary/50 h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">عدد المنتجات</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalProductsInStock}</div>
+              <p className="text-xs text-muted-foreground">إجمالي المنتجات المتوفرة في المخزون</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/products?filter=low-stock" className="block cursor-pointer group">
+         <Card className="transition-colors group-hover:bg-muted/30 group-hover:border-primary/50 h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">منتجات منخفضة المخزون</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{lowStockProductsCount}</div>
+              <p className="text-xs text-muted-foreground">عدد المنتجات التي مخزونها منخفض</p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <Card>
@@ -146,4 +150,3 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
     </div>
   );
 }
-
