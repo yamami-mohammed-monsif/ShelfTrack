@@ -25,7 +25,7 @@ export interface Sale {
   productNameSnapshot: string; // Snapshot of product name at time of sale
   quantitySold: number;
   wholesalePricePerUnitSnapshot: number; // Snapshot of product wholesale price at sale time
-  retailPricePerUnitSnapshot: number; // Snapshot of product retail price at sale time (this was salePricePerUnit)
+  retailPricePerUnitSnapshot: number; // Snapshot of product retail price at sale time
   totalSaleAmount: number; // Calculated based on retailPricePerUnitSnapshot * quantitySold
   saleTimestamp: number; // Unix timestamp (milliseconds)
 }
@@ -35,6 +35,12 @@ export interface SaleFormData {
   quantitySold: number;
   saleTimestamp: string; // Expected format for datetime-local input: "YYYY-MM-DDTHH:mm"
 }
+
+export interface EditSaleFormData {
+  quantitySold: number;
+  saleTimestamp: string; // ISO string for datetime-local
+}
+
 
 export type SalesTimeframe = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'half_yearly' | 'yearly';
 
@@ -52,3 +58,4 @@ export interface Notification {
   productId?: string; // To link to a product for specific notifications like low stock
   href?: string; // Optional link for the notification (e.g., to product page)
 }
+

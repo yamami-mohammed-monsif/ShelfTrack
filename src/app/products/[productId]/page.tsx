@@ -3,13 +3,13 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-// import { AppHeader } from '@/components/bouzid-store/app-header'; // No longer needed here
 import { EditProductModal } from '@/components/bouzid-store/edit-product-modal';
+import { EditSaleModal } from '@/components/bouzid-store/edit-sale-modal'; // New Import
 import { SalesTable } from '@/components/bouzid-store/sales-table';
 import { useProductsStorage } from '@/hooks/use-products-storage';
 import { useSalesStorage } from '@/hooks/use-sales-storage';
 import { useToast } from '@/hooks/use-toast';
-import type { Product, ProductFormData, Sale, ProductType } from '@/lib/types';
+import type { Product, ProductFormData, Sale, EditSaleFormData } from '@/lib/types'; // Updated types
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
@@ -62,13 +62,29 @@ export default function ProductDetailPage() {
     getProductById, 
     editProduct, 
     deleteProduct,
+    increaseProductQuantity, // For sale edits/deletes
+    decreaseProductQuantity, // For sale edits
     isLoaded: productsLoaded,
   } = useProductsStorage();
-  const { sales, isSalesLoaded } = useSalesStorage();
+  const { 
+    sales, 
+    editSale, // For editing sales
+    deleteSale, // For deleting sales
+    isSalesLoaded 
+  } = useSalesStorage();
 
   const [product, setProduct] = useState<Product | null | undefined>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEditProductModalOpen, setIsEditProductModalOpen] = useState(false);
+  const [isDeleteProductDialogOpen, setIsDeleteProductDialogOpen] = useState(false);
+
+  // State for EditSaleModal
+  const [isEditSaleModalOpen, setIsEditSaleModalOpen] = useState(false);
+  const [saleToEdit, setSaleToEdit] = useState<Sale | null>(null);
+  
+  // State for DeleteSaleDialog
+  const [isDeleteSaleDialogOpen, setIsDeleteSaleDialogOpen] = useState(false);
+  const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
+
 
   useEffect(() => {
     if (productsLoaded && productId) {
@@ -83,16 +99,21 @@ export default function ProductDetailPage() {
 
   const productSales = useMemo(() => {
     if (!product) return [];
+    // Ensure sales are sorted by timestamp for this product
     return sales
       .filter(sale => sale.productId === product.id)
-      .sort((a, b) => a.saleTimestamp - b.saleTimestamp);
+      .sort((a, b) => b.saleTimestamp - a.saleTimestamp); // Sort by most recent first for table
   }, [sales, product]);
 
   const salesChartData = useMemo(() => {
-    return productSales.map(sale => ({
-      originalDate: new Date(sale.saleTimestamp).toISOString(),
-      date: format(new Date(sale.saleTimestamp), 'MMM d', { locale: arSA }), 
-      quantitySold: sale.quantitySold,
+    // For chart, sort by oldest first
+    return productSales
+      .slice() // Create a copy before reversing for chart
+      .reverse()
+      .map(sale => ({
+        originalDate: new Date(sale.saleTimestamp).toISOString(),
+        date: format(new Date(sale.saleTimestamp), 'MMM d', { locale: arSA }), 
+        quantitySold: sale.quantitySold,
     }));
   }, [productSales]);
 
@@ -103,14 +124,14 @@ export default function ProductDetailPage() {
     },
   };
 
-  const handleOpenEditModal = () => {
+  const handleOpenEditProductModal = () => {
     if (product) {
-      setIsEditModalOpen(true);
+      setIsEditProductModalOpen(true);
     }
   };
 
-  const handleCloseEditModal = () => {
-    setIsEditModalOpen(false);
+  const handleCloseEditProductModal = () => {
+    setIsEditProductModalOpen(false);
   };
 
   const handleSaveEditedProduct = (id: string, data: ProductFormData) => {
@@ -129,26 +150,96 @@ export default function ProductDetailPage() {
         variant: "destructive",
       });
     }
-    handleCloseEditModal();
+    handleCloseEditProductModal();
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDeleteProduct = () => {
     if (product) {
+      // Before deleting product, consider if associated sales should also be handled (e.g., anonymized or cascade deleted).
+      // For now, sales will remain but might point to a non-existent product if not careful.
+      // A more robust system might prevent product deletion if sales exist, or archive the product.
+      // For this iteration, we just delete the product.
       deleteProduct(product.id);
       toast({
         title: "نجاح",
         description: `تم حذف المنتج "${product.name}" بنجاح.`,
         variant: "default",
       });
-      setIsDeleteDialogOpen(false);
+      setIsDeleteProductDialogOpen(false);
       router.push('/products'); 
     }
   };
 
+  // --- Sale Edit/Delete Handlers ---
+  const handleEditSaleTrigger = (sale: Sale) => {
+    setSaleToEdit(sale); // product for sale is the current page's product
+    setIsEditSaleModalOpen(true);
+  };
+
+  const handleSaveEditedSale = (
+    saleId: string, 
+    originalSale: Sale, 
+    updatedFormData: EditSaleFormData
+  ) => {
+    const editedSale = editSale(saleId, updatedFormData);
+    if (editedSale && product) { // product should be the current page product
+      const quantityDifference = originalSale.quantitySold - editedSale.quantitySold;
+      
+      if (quantityDifference > 0) { 
+        increaseProductQuantity(product.id, quantityDifference);
+      } else if (quantityDifference < 0) {
+        decreaseProductQuantity(product.id, -quantityDifference);
+      }
+      setProduct(getProductById(product.id)); // Refresh product state
+
+      toast({
+        title: "نجاح",
+        description: `تم تعديل عملية البيع للمنتج "${editedSale.productNameSnapshot}" بنجاح.`,
+        variant: "default",
+      });
+    } else {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء تعديل عملية البيع.",
+        variant: "destructive",
+      });
+    }
+    setIsEditSaleModalOpen(false);
+    setSaleToEdit(null);
+  };
+
+  const handleDeleteSaleTrigger = (sale: Sale) => {
+    setSaleToDelete(sale);
+    setIsDeleteSaleDialogOpen(true);
+  };
+
+  const handleConfirmDeleteSale = () => {
+    if (saleToDelete && product) {
+      const deleted = deleteSale(saleToDelete.id);
+      if (deleted) {
+        increaseProductQuantity(product.id, saleToDelete.quantitySold);
+        setProduct(getProductById(product.id)); // Refresh product state
+        toast({
+          title: "نجاح",
+          description: `تم حذف عملية البيع للمنتج "${saleToDelete.productNameSnapshot}" بنجاح.`,
+          variant: "default",
+        });
+      } else {
+         toast({
+          title: "خطأ",
+          description: "حدث خطأ أثناء حذف عملية البيع.",
+          variant: "destructive",
+        });
+      }
+    }
+    setIsDeleteSaleDialogOpen(false);
+    setSaleToDelete(null);
+  };
+
+
   if (!productsLoaded || !isSalesLoaded) {
     return (
       <div className="flex flex-col min-h-screen bg-background">
-        {/* <AppHeader /> Removed, handled globally */}
         <main className="flex-grow flex items-center justify-center">
           <p className="text-foreground text-xl">جار تحميل تفاصيل المنتج...</p>
         </main>
@@ -159,7 +250,6 @@ export default function ProductDetailPage() {
   if (!product) {
     return (
       <div className="flex flex-col min-h-screen bg-background">
-        {/* <AppHeader /> Removed, handled globally */}
         <main className="flex-grow flex flex-col items-center justify-center p-8 text-center">
           <Package className="h-16 w-16 text-destructive mb-4" />
           <h1 className="text-2xl font-bold text-destructive mb-2">المنتج غير موجود</h1>
@@ -174,7 +264,6 @@ export default function ProductDetailPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      {/* <AppHeader /> Removed, handled globally */}
       <main className="flex-grow p-4 md:p-8 space-y-6">
         <Card className="shadow-lg rounded-lg">
           <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0 pb-2">
@@ -183,11 +272,11 @@ export default function ProductDetailPage() {
               <CardTitle className="text-xl">{product.name}</CardTitle>
             </div>
             <div className="flex space-x-2 rtl:space-x-reverse">
-              <Button variant="outline" size="sm" onClick={handleOpenEditModal}>
+              <Button variant="outline" size="sm" onClick={handleOpenEditProductModal}>
                 <Edit3 className="me-2 h-4 w-4" />
                 تعديل
               </Button>
-              <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+              <AlertDialog open={isDeleteProductDialogOpen} onOpenChange={setIsDeleteProductDialogOpen}>
                 <AlertDialogTrigger asChild>
                   <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/50">
                     <Trash2 className="me-2 h-4 w-4" />
@@ -196,14 +285,14 @@ export default function ProductDetailPage() {
                 </AlertDialogTrigger>
                 <AlertDialogContent dir="rtl">
                   <AlertDialogHeader>
-                    <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+                    <AlertDialogTitle>تأكيد حذف المنتج</AlertDialogTitle>
                     <AlertDialogDescription>
                       هل أنت متأكد أنك تريد حذف المنتج "{product.name}"؟ لا يمكن التراجع عن هذا الإجراء.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleConfirmDelete} className={cn(buttonVariants({variant: "destructive"}))}>
+                    <AlertDialogAction onClick={handleConfirmDeleteProduct} className={cn(buttonVariants({variant: "destructive"}))}>
                       تأكيد الحذف
                     </AlertDialogAction>
                   </AlertDialogFooter>
@@ -328,18 +417,56 @@ export default function ProductDetailPage() {
             <CardDescription>جميع عمليات البيع المسجلة لهذا المنتج.</CardDescription>
           </CardHeader>
           <CardContent className="p-0 md:p-4">
-            <SalesTable sales={productSales} />
+            <SalesTable 
+                sales={productSales} 
+                showActions={true}
+                onEditSaleTrigger={handleEditSaleTrigger}
+                onDeleteSaleTrigger={handleDeleteSaleTrigger}
+            />
           </CardContent>
         </Card>
       </main>
 
       {product && (
         <EditProductModal
-          isOpen={isEditModalOpen}
-          onClose={handleCloseEditModal}
+          isOpen={isEditProductModalOpen}
+          onClose={handleCloseEditProductModal}
           onSaveEdit={handleSaveEditedProduct}
           productToEdit={product}
         />
+      )}
+
+      {saleToEdit && product && (
+        <EditSaleModal
+          isOpen={isEditSaleModalOpen}
+          onClose={() => {
+            setIsEditSaleModalOpen(false);
+            setSaleToEdit(null);
+          }}
+          onSaveEdit={handleSaveEditedSale}
+          saleToEdit={saleToEdit}
+          productForSale={product} // The current page's product
+        />
+      )}
+
+      {saleToDelete && (
+        <AlertDialog open={isDeleteSaleDialogOpen} onOpenChange={setIsDeleteSaleDialogOpen}>
+          <AlertDialogContent dir="rtl">
+            <AlertDialogHeader>
+              <AlertDialogTitle>تأكيد حذف البيع</AlertDialogTitle>
+              <AlertDialogDescription>
+                هل أنت متأكد أنك تريد حذف عملية البيع للمنتج "{saleToDelete.productNameSnapshot}"؟ 
+                سيتم إعادة الكمية المباعة ({saleToDelete.quantitySold.toLocaleString()}) إلى المخزون.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>إلغاء</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmDeleteSale} className={cn(buttonVariants({variant: "destructive"}))}>
+                تأكيد الحذف
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </div>
   );
