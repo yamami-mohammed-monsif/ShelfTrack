@@ -11,9 +11,12 @@ import { useToast } from "@/hooks/use-toast";
 import type { Product, ProductFormData, ProductType } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Package, Filter, Search } from 'lucide-react';
+// import { Input } from '@/components/ui/input'; // No longer directly used for search bar
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Package, Filter, ChevronsUpDown, Check } from 'lucide-react';
 import { isLowStock } from '@/lib/product-utils';
+import { cn } from '@/lib/utils';
 
 type ProductFilter = 'all' | ProductType | 'low-stock';
 
@@ -34,6 +37,7 @@ export default function ProductsClientContent() {
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [activeFilter, setActiveFilter] = useState<ProductFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [comboboxOpen, setComboboxOpen] = useState(false);
 
   useEffect(() => {
     const filterFromQuery = searchParams.get('filter');
@@ -89,7 +93,7 @@ export default function ProductsClientContent() {
     };
   }, [products]);
 
-  const filteredProducts = useMemo(() => {
+  const filteredProductsForTable = useMemo(() => {
     let intermediateProducts = products;
 
     if (activeFilter !== 'all') {
@@ -134,14 +138,51 @@ export default function ProductsClientContent() {
           <CardContent className="p-4">
             <div className="mb-6 space-y-4">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="ابحث عن منتج بالاسم..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 rounded-md border"
-                />
+                <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={comboboxOpen}
+                      className="w-full justify-between text-muted-foreground hover:text-muted-foreground"
+                    >
+                      {searchTerm || "ابحث عن منتج بالاسم..."}
+                      <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-[300px] overflow-y-auto">
+                    <Command>
+                      <CommandInput
+                        placeholder="ابحث عن منتج..."
+                        value={searchTerm}
+                        onValueChange={setSearchTerm}
+                      />
+                      <CommandList>
+                        <CommandEmpty>لم يتم العثور على منتج.</CommandEmpty>
+                        <CommandGroup>
+                          {products.map((product) => (
+                            <CommandItem
+                              key={product.id}
+                              value={product.name}
+                              onSelect={(currentValue) => {
+                                setSearchTerm(currentValue === searchTerm ? "" : currentValue);
+                                setComboboxOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "me-2 h-4 w-4",
+                                  searchTerm.toLowerCase() === product.name.toLowerCase() ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {product.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="flex items-center space-x-2 rtl:space-x-reverse flex-wrap pb-4 border-b">
                 <Filter className="h-5 w-5 text-muted-foreground" />
@@ -154,9 +195,9 @@ export default function ProductsClientContent() {
                     onClick={() => setActiveFilter(filterKey)}
                     className="px-3 py-1 h-auto m-1"
                   >
-                    {filterLabels[filterKey]} ({filterKey === 'all' 
-                      ? productCounts.all 
-                      : products.filter(p => { 
+                    {filterLabels[filterKey]} ({filterKey === 'all'
+                      ? productCounts.all
+                      : products.filter(p => {
                           if (filterKey === 'low-stock') return isLowStock(p);
                           return p.type === filterKey;
                         }).length
@@ -165,10 +206,10 @@ export default function ProductsClientContent() {
                 ))}
               </div>
             </div>
-            <ProductsTable 
-              products={filteredProducts} 
+            <ProductsTable
+              products={filteredProductsForTable}
               onEditProduct={handleOpenEditModal}
-              onDeleteProduct={handleDeleteProduct} 
+              onDeleteProduct={handleDeleteProduct}
             />
           </CardContent>
         </Card>
