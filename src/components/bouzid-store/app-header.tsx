@@ -168,11 +168,19 @@ export function AppHeader() {
                       </div>
                     )}
                   </ScrollArea>
+                   {notifications.length > 0 && (
+                    <div className="p-2 text-center border-t border-border">
+                        <Button variant="link" size="sm" asChild className="text-primary">
+                            <Link href="#">عرض كل الإشعارات</Link> 
+                        </Button>
+                    </div>
+                  )}
                 </PopoverContent>
               </Popover>
             )}
 
-            <Button 
+            {/* Export Data button removed from here for desktop view */}
+            {/* <Button 
                 variant="ghost" 
                 onClick={handleDownloadData} 
                 className="text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground px-2 sm:px-3 py-2"
@@ -180,7 +188,7 @@ export function AppHeader() {
               >
                 <Download className="me-1 sm:me-2 h-5 w-5" />
                 تصدير البيانات
-            </Button>
+            </Button> */}
 
             <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
               <AlertDialogTrigger asChild>
@@ -267,7 +275,7 @@ export function AppHeader() {
                   <div className="pt-4 mt-4 border-t border-border">
                       <Button 
                         variant="ghost" 
-                        onClick={handleDownloadData} 
+                        onClick={handleDownloadData} // Export Data button in mobile menu
                         className="justify-start text-lg text-foreground hover:bg-accent hover:text-accent-foreground w-full"
                       >
                         <Download className="me-3 h-5 w-5" />
@@ -294,5 +302,3 @@ export function AppHeader() {
     </header>
   );
 }
-
-  

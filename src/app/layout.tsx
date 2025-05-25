@@ -2,7 +2,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import Link from 'next/link';
-import { Home, Archive, ClipboardList, LineChart as LineChartIcon } from 'lucide-react';
+import { Home, Archive, ClipboardList, LineChart as LineChartIcon, History, Download } from 'lucide-react'; // Added Download
 import {
   SidebarProvider,
   Sidebar,
@@ -14,7 +14,8 @@ import {
   SidebarRail
 } from '@/components/ui/sidebar';
 import { Toaster } from "@/components/ui/toaster";
-import { AppHeader } from '@/components/bouzid-store/app-header'; // Import AppHeader here
+import { AppHeader } from '@/components/bouzid-store/app-header';
+import { SidebarExportButton } from '@/components/bouzid-store/sidebar-export-button'; // Import the new component
 import './globals.css';
 
 const geistSans = Geist({
@@ -85,6 +86,16 @@ export default function RootLayout({
                       </SidebarMenuButton>
                     </Link>
                   </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <Link href="/backup-log" legacyBehavior passHref>
+                      <SidebarMenuButton tooltip={{ children: "سجل النسخ", side: "left" }} aria-label="سجل النسخ">
+                        <History />
+                        <span>سجل النسخ</span>
+                      </SidebarMenuButton>
+                    </Link>
+                  </SidebarMenuItem>
+                  {/* Add the new export button component here */}
+                  <SidebarExportButton />
                 </SidebarMenu>
               </SidebarContent>
             </Sidebar>
