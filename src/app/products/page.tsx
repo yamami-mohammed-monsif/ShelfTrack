@@ -11,14 +11,16 @@ import type { Product, ProductFormData, ProductType } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Package, Filter } from 'lucide-react';
+import { isLowStock } from '@/lib/product-utils'; // Import isLowStock
 
-type ProductFilter = 'all' | ProductType;
+type ProductFilter = 'all' | ProductType | 'low-stock';
 
 const filterLabels: Record<ProductFilter, string> = {
   all: 'الكل',
   powder: 'مسحوق',
   liquid: 'سائل',
   unit: 'وحدة',
+  'low-stock': 'مخزون منخفض',
 };
 
 export default function ProductsListPage() {
@@ -71,12 +73,16 @@ export default function ProductsListPage() {
       powder: products.filter(p => p.type === 'powder').length,
       liquid: products.filter(p => p.type === 'liquid').length,
       unit: products.filter(p => p.type === 'unit').length,
+      'low-stock': products.filter(p => isLowStock(p)).length, // Calculate low stock count
     };
   }, [products]);
 
   const filteredProducts = useMemo(() => {
     if (activeFilter === 'all') {
       return products;
+    }
+    if (activeFilter === 'low-stock') {
+      return products.filter(product => isLowStock(product));
     }
     return products.filter(product => product.type === activeFilter);
   }, [products, activeFilter]);
@@ -102,12 +108,12 @@ export default function ProductsListPage() {
               <Package className="h-6 w-6 text-primary" />
               <CardTitle className="text-xl">قائمة المنتجات</CardTitle>
             </div>
-            <CardDescription>عرض جميع المنتجات الموجودة في المخزون وتفاصيلها. قم بالتصفية حسب النوع.</CardDescription>
+            <CardDescription>عرض جميع المنتجات الموجودة في المخزون وتفاصيلها. قم بالتصفية حسب النوع أو حالة المخزون.</CardDescription>
           </CardHeader>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2 rtl:space-x-reverse mb-4 pb-4 border-b flex-wrap">
               <Filter className="h-5 w-5 text-muted-foreground" />
-              <span className="text-sm font-medium text-muted-foreground">تصفية حسب النوع:</span>
+              <span className="text-sm font-medium text-muted-foreground">تصفية حسب:</span>
               {(Object.keys(filterLabels) as ProductFilter[]).map((filterKey) => (
                 <Button
                   key={filterKey}
