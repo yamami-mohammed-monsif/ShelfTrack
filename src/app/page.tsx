@@ -2,7 +2,6 @@
 'use client';
 
 import React, { useState } from 'react';
-// import { AppHeader } from '@/components/bouzid-store/app-header'; // No longer needed here
 import { SalesDashboard } from '@/components/bouzid-store/sales-dashboard';
 import { AddProductModal } from '@/components/bouzid-store/add-product-modal';
 import { RecordSaleModal } from '@/components/bouzid-store/record-sale-modal';
@@ -71,9 +70,8 @@ export default function BouzidStorePage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-      {/* <AppHeader /> Removed, handled globally */}
-      <main className="flex-grow pb-28"> {/* Add padding-bottom to avoid overlap with fixed footer buttons */}
+    <div className="flex flex-col min-h-screen bg-background w-full"> {/* Added w-full */}
+      <main className="flex-grow pb-28 w-full"> {/* Added w-full */}
         <SalesDashboard products={productsHook.products} />
       </main>
       
