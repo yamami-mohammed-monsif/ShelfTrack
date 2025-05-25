@@ -12,9 +12,11 @@ import { useSalesStorage } from '@/hooks/use-sales-storage';
 import { isLowStock } from '@/lib/product-utils';
 import {
   startOfDay, endOfDay,
+  startOfWeek, endOfWeek, // For weekly calculations
   isWithinInterval,
 } from 'date-fns';
 import { arSA } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 interface SalesDashboardProps {
   products: Product[];
@@ -85,7 +87,14 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dailyStats.todayProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} د.ج</div>
+            <div className={cn(
+                "text-2xl font-bold",
+                dailyStats.todayProfit > 0 && "text-emerald-600",
+                dailyStats.todayProfit < 0 && "text-destructive"
+              )}
+            >
+              {dailyStats.todayProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} د.ج
+            </div>
             <p className="text-xs text-muted-foreground">إجمالي الأرباح المحققة اليوم</p>
           </CardContent>
         </Card>
@@ -137,3 +146,4 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
     </div>
   );
 }
+
