@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { AppHeader } from '@/components/bouzid-store/app-header';
+// import { AppHeader } from '@/components/bouzid-store/app-header'; // No longer needed here
 import { SalesTable } from '@/components/bouzid-store/sales-table';
 import { useSalesStorage } from '@/hooks/use-sales-storage';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -14,7 +14,7 @@ export default function SalesRecordPage() {
   if (!isSalesLoaded) {
     return (
       <div className="flex flex-col min-h-screen bg-background">
-        <AppHeader />
+        {/* <AppHeader /> Removed, handled globally */}
         <main className="flex-grow flex items-center justify-center">
           <p className="text-foreground text-xl">جار تحميل سجل المبيعات...</p>
         </main>
@@ -24,7 +24,7 @@ export default function SalesRecordPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <AppHeader />
+      {/* <AppHeader /> Removed, handled globally */}
       <main className="flex-grow p-4 md:p-8">
         <Card className="shadow-lg rounded-lg overflow-hidden">
           <CardHeader className="bg-card border-b">

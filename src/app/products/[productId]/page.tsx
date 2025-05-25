@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { AppHeader } from '@/components/bouzid-store/app-header';
+// import { AppHeader } from '@/components/bouzid-store/app-header'; // No longer needed here
 import { EditProductModal } from '@/components/bouzid-store/edit-product-modal';
 import { SalesTable } from '@/components/bouzid-store/sales-table';
 import { useProductsStorage } from '@/hooks/use-products-storage';
@@ -11,7 +11,7 @@ import { useSalesStorage } from '@/hooks/use-sales-storage';
 import { useToast } from '@/hooks/use-toast';
 import type { Product, ProductFormData, Sale, ProductType } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button, buttonVariants } from '@/components/ui/button'; // Added buttonVariants
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -148,7 +148,7 @@ export default function ProductDetailPage() {
   if (!productsLoaded || !isSalesLoaded) {
     return (
       <div className="flex flex-col min-h-screen bg-background">
-        <AppHeader />
+        {/* <AppHeader /> Removed, handled globally */}
         <main className="flex-grow flex items-center justify-center">
           <p className="text-foreground text-xl">جار تحميل تفاصيل المنتج...</p>
         </main>
@@ -159,7 +159,7 @@ export default function ProductDetailPage() {
   if (!product) {
     return (
       <div className="flex flex-col min-h-screen bg-background">
-        <AppHeader />
+        {/* <AppHeader /> Removed, handled globally */}
         <main className="flex-grow flex flex-col items-center justify-center p-8 text-center">
           <Package className="h-16 w-16 text-destructive mb-4" />
           <h1 className="text-2xl font-bold text-destructive mb-2">المنتج غير موجود</h1>
@@ -174,7 +174,7 @@ export default function ProductDetailPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <AppHeader />
+      {/* <AppHeader /> Removed, handled globally */}
       <main className="flex-grow p-4 md:p-8 space-y-6">
         <Card className="shadow-lg rounded-lg">
           <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0 pb-2">
@@ -344,4 +344,3 @@ export default function ProductDetailPage() {
     </div>
   );
 }
-

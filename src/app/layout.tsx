@@ -10,7 +10,6 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  // SidebarHeader, // No longer used here
   SidebarContent,
   SidebarRail
 } from '@/components/ui/sidebar';
@@ -41,8 +40,9 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}>
+        <AppHeader /> {/* AppHeader is now global and full-width */}
         <SidebarProvider defaultOpen={false}> {/* Sidebar is collapsed by default on desktop */}
-          <div className="flex min-h-screen">
+          <div className="flex min-h-screen"> {/* This div is the main container for sidebar + content area */}
             {/* Desktop Sidebar: Shown only on md and larger, on the right */}
             <Sidebar
               side="right"
@@ -50,8 +50,8 @@ export default function RootLayout({
               className="hidden md:flex flex-col border-l bg-sidebar text-sidebar-foreground"
             >
               <SidebarRail /> {/* Allows clicking the edge to toggle expand/collapse */}
-              {/* SidebarHeader with logo removed from here */}
-              <SidebarContent className="flex-grow p-2 pt-16 overflow-y-auto"> {/* Added pt-16 for AppHeader space */}
+              {/* SidebarContent already has pt-16, accounting for the AppHeader's height */}
+              <SidebarContent className="flex-grow p-2 pt-16 overflow-y-auto">
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <Link href="/" legacyBehavior passHref>
@@ -90,11 +90,8 @@ export default function RootLayout({
             </Sidebar>
 
             {/* Main content area that adjusts to the sidebar */}
-            {/* The AppHeader is now rendered by individual page components, typically as their first child, */}
-            {/* ensuring it's within the SidebarInset flow and respects the sidebar. */}
-            <SidebarInset className="flex-1 flex flex-col overflow-x-hidden">
-              {/* Example: src/app/page.tsx would render <AppHeader /> then its main content. */}
-              {/* This ensures AppHeader is part of the main scrollable/layout-adjusted area. */}
+            {/* It needs top padding to account for the globally rendered AppHeader */}
+            <SidebarInset className="flex-1 flex flex-col overflow-x-hidden pt-16"> {/* Added pt-16 */}
               {children}
             </SidebarInset>
           </div>

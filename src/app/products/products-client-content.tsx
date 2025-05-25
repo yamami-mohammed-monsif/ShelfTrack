@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AppHeader } from '@/components/bouzid-store/app-header';
+// import { AppHeader } from '@/components/bouzid-store/app-header'; // No longer needed here
 import { ProductsTable } from '@/components/bouzid-store/products-table';
 import { EditProductModal } from '@/components/bouzid-store/edit-product-modal';
 import { useProductsStorage } from '@/hooks/use-products-storage';
@@ -11,7 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import type { Product, ProductFormData, ProductType } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-// import { Input } from '@/components/ui/input'; // No longer directly used for search bar
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Package, Filter, ChevronsUpDown, Check } from 'lucide-react';
@@ -115,7 +114,7 @@ export default function ProductsClientContent() {
   if (!isLoaded) {
     return (
       <div className="flex flex-col min-h-screen bg-background">
-        <AppHeader />
+        {/* <AppHeader /> Removed, handled globally */}
         <main className="flex-grow flex items-center justify-center">
           <p className="text-foreground text-xl">جار التحميل...</p>
         </main>
@@ -125,7 +124,7 @@ export default function ProductsClientContent() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <AppHeader />
+      {/* <AppHeader /> Removed, handled globally */}
       <main className="flex-grow p-4 md:p-8">
         <Card className="shadow-lg rounded-lg overflow-hidden">
           <CardHeader className="bg-card border-b">

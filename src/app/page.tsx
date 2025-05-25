@@ -2,9 +2,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AppHeader } from '@/components/bouzid-store/app-header';
+// import { AppHeader } from '@/components/bouzid-store/app-header'; // No longer needed here
 import { SalesDashboard } from '@/components/bouzid-store/sales-dashboard';
-// import { AddProductButton } from '@/components/bouzid-store/add-product-button'; // No longer used directly
 import { AddProductModal } from '@/components/bouzid-store/add-product-modal';
 import { RecordSaleModal } from '@/components/bouzid-store/record-sale-modal';
 import { useProductsStorage } from '@/hooks/use-products-storage';
@@ -18,8 +17,8 @@ export default function BouzidStorePage() {
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
   const [isRecordSaleModalOpen, setIsRecordSaleModalOpen] = useState(false);
   
-  const productsHook = useProductsStorage(); // Renamed for clarity
-  const salesHook = useSalesStorage(); // Renamed for clarity
+  const productsHook = useProductsStorage(); 
+  const salesHook = useSalesStorage(); 
   const { toast } = useToast();
 
   const handleAddProduct = (data: ProductFormData) => {
@@ -32,7 +31,6 @@ export default function BouzidStorePage() {
       });
       console.log('New product added:', newProduct);
     } else {
-      // Duplicate product was detected by the hook
       toast({
         title: "خطأ",
         description: `المنتج "${data.name}" موجود بالفعل في المخزون.`,
@@ -74,7 +72,7 @@ export default function BouzidStorePage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <AppHeader />
+      {/* <AppHeader /> Removed, handled globally */}
       <main className="flex-grow pb-28"> {/* Add padding-bottom to avoid overlap with fixed footer buttons */}
         <SalesDashboard products={productsHook.products} />
       </main>
@@ -115,4 +113,3 @@ export default function BouzidStorePage() {
     </div>
   );
 }
-
