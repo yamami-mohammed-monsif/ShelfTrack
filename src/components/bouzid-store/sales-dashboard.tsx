@@ -7,13 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { SalesTable } from '@/components/bouzid-store/sales-table';
 import type { Product } from '@/lib/types';
-import { DollarSign, TrendingUp, Package, AlertTriangle, List, ArrowLeft } from 'lucide-react';
+import { DollarSign, TrendingUp, Package, AlertTriangle, List, ArrowLeft, ShoppingCart } from 'lucide-react';
 import { useSalesStorage } from '@/hooks/use-sales-storage';
 import { isLowStock } from '@/lib/product-utils';
 import {
   startOfDay, endOfDay,
+  startOfWeek, endOfWeek,
   isWithinInterval,
-  isSameDay, 
+  isSameDay,
 } from 'date-fns';
 // import { arSA } from 'date-fns/locale'; // arSA not strictly needed for interval checks unless week starts on different day
 import { cn } from '@/lib/utils';
@@ -66,7 +67,7 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
 
   const recentSales = useMemo(() => {
     if (!isSalesLoaded) return [];
-    return sales.sort((a, b) => b.saleTimestamp - a.saleTimestamp).slice(0, 5);
+    return sales.sort((a, b) => b.saleTimestamp - a.timestamp).slice(0, 5);
   }, [sales, isSalesLoaded]);
 
 
@@ -79,7 +80,7 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
   }
 
   return (
-    <div className="py-8 space-y-8 container mx-auto px-4"> {/* Removed px-4 from here */}
+    <div className="py-8 space-y-8"> 
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2"> 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -148,7 +149,7 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0 md:p-4">
-          <SalesTable sales={recentSales} />
+          <SalesTable sales={recentSales} showCaption={false} />
         </CardContent>
         <div className="p-4 pt-2 text-center">
           <Button asChild variant="link" className="text-primary">
@@ -162,4 +163,3 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
     </div>
   );
 }
-

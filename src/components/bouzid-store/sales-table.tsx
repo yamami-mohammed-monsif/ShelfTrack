@@ -22,9 +22,16 @@ interface SalesTableProps {
   onEditSaleTrigger?: (sale: Sale) => void; // Optional: only if editing is enabled
   onDeleteSaleTrigger?: (sale: Sale) => void; // Optional: only if deletion is enabled
   showActions?: boolean; // To conditionally show the actions column
+  showCaption?: boolean; // To conditionally show the table caption
 }
 
-export function SalesTable({ sales, onEditSaleTrigger, onDeleteSaleTrigger, showActions = false }: SalesTableProps) {
+export function SalesTable({
+  sales,
+  onEditSaleTrigger,
+  onDeleteSaleTrigger,
+  showActions = false,
+  showCaption = true,
+}: SalesTableProps) {
   if (sales.length === 0) {
     return (
       <div className="text-center py-10 px-4 text-muted-foreground">
@@ -37,7 +44,11 @@ export function SalesTable({ sales, onEditSaleTrigger, onDeleteSaleTrigger, show
   return (
     <div className="overflow-x-auto">
       <Table>
-        <TableCaption className="py-4">سجل بجميع عمليات البيع المسجلة.</TableCaption>
+        {showCaption && (
+          <TableCaption className="py-4">
+            سجل بجميع عمليات البيع المسجلة.
+          </TableCaption>
+        )}
         <TableHeader>
           <TableRow>
             <TableHead className="min-w-[150px] rtl:text-right">اسم المنتج</TableHead>
