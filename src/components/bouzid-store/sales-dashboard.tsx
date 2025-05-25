@@ -79,7 +79,7 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
   }
 
   return (
-    <div className="py-8 px-4 space-y-8">
+    <div className="py-8 space-y-8"> {/* Removed px-4 from here */}
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2"> 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -162,3 +162,4 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
     </div>
   );
 }
+
