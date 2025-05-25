@@ -1,3 +1,4 @@
+
 "use client"
 
 // Inspired by react-hot-toast library
@@ -9,7 +10,7 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_REMOVE_DELAY = 1000 // Changed from 1000000 to 1000 (1 second for exit animation)
 
 type ToasterToast = ToastProps & {
   id: string
@@ -57,6 +58,7 @@ interface State {
 }
 
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+const autoDismissTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
 
 const addToRemoveQueue = (toastId: string) => {
   if (toastTimeouts.has(toastId)) {
@@ -72,6 +74,14 @@ const addToRemoveQueue = (toastId: string) => {
   }, TOAST_REMOVE_DELAY)
 
   toastTimeouts.set(toastId, timeout)
+}
+
+// Helper to clear auto-dismiss timeout if toast is dismissed manually
+const clearAutoDismissTimeout = (toastId: string) => {
+  if (autoDismissTimeouts.has(toastId)) {
+    clearTimeout(autoDismissTimeouts.get(toastId)!)
+    autoDismissTimeouts.delete(toastId)
+  }
 }
 
 export const reducer = (state: State, action: Action): State => {
@@ -93,13 +103,13 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
       if (toastId) {
         addToRemoveQueue(toastId)
+        clearAutoDismissTimeout(toastId) // Clear auto-dismiss if manually dismissed
       } else {
         state.toasts.forEach((toast) => {
           addToRemoveQueue(toast.id)
+          clearAutoDismissTimeout(toast.id)
         })
       }
 
@@ -163,6 +173,19 @@ function toast({ ...props }: Toast) {
       },
     },
   })
+
+  // Auto-dismiss logic
+  const autoDismissTimeout = setTimeout(() => {
+    // Check if the toast still exists in memoryState and is open before dismissing
+    const currentToast = memoryState.toasts.find(t => t.id === id);
+    if (currentToast && currentToast.open) {
+        dismiss();
+    }
+    autoDismissTimeouts.delete(id); // Clean up the timeout from the map
+  }, 3000); // 3 seconds
+
+  autoDismissTimeouts.set(id, autoDismissTimeout);
+
 
   return {
     id: id,
