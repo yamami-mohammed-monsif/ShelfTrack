@@ -342,7 +342,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
             )}
 
 
-            <DialogFooter className="pt-6 sticky bottom-0 bg-card border-t border-border z-10 -mx-4 px-4 pb-4">
+            <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
                 إلغاء
               </Button>
