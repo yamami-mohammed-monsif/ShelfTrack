@@ -113,7 +113,10 @@ export function AppHeader() {
                   <span className="sr-only">فتح الإشعارات</span>
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-96 p-0 bg-card text-card-foreground" align="end">
+              <PopoverContent 
+                className="w-[calc(100vw-2rem)] md:w-96 p-0 bg-card text-card-foreground" 
+                align="end"
+              >
                 <div className="p-4 border-b border-border">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold">الإشعارات</h3>
@@ -133,11 +136,14 @@ export function AppHeader() {
                         <Link
                           key={notification.id}
                           href={notification.href || '#'}
-                          onClick={() => handleNotificationClick(notification.id)}
+                          onClick={(e) => {
+                            if (!notification.href) e.preventDefault();
+                            handleNotificationClick(notification.id);
+                          }}
                           className={cn(
                             "block p-3 hover:bg-muted/50",
                             !notification.read && "bg-primary/10", 
-                            !notification.href && "pointer-events-none" 
+                            !notification.href && "cursor-default" 
                           )}
                         >
                           <p className={cn(
@@ -233,3 +239,5 @@ export function AppHeader() {
     </header>
   );
 }
+
+    
