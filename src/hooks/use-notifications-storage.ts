@@ -21,7 +21,7 @@ let memoryState: NotificationsState = {
 
 const listeners: Array<(state: NotificationsState) => void> = [];
 
-const NotificationActionTypes = {
+export const NotificationActionTypes = {
   SET_LOADED: 'SET_LOADED_NOTIFICATIONS',
   ADD: 'ADD_NOTIFICATION',
   MARK_READ: 'MARK_AS_READ',
@@ -49,60 +49,53 @@ function pruneOldReadNotifications(notifications: Notification[]): Notification[
   });
 }
 
-function notificationsReducer(state: NotificationsState, action: NotificationAction): NotificationsState {
+function notificationsReducer(currentNotifications: Notification[], action: NotificationAction): Notification[] { // Changed from state to currentNotifications
   switch (action.type) {
     case NotificationActionTypes.SET_LOADED:
       const prunedInitial = pruneOldReadNotifications(action.payload);
-      return {
-        notifications: prunedInitial.sort((a, b) => b.timestamp - a.timestamp).slice(0, MAX_NOTIFICATIONS),
-        isLoaded: true,
-      };
+      return prunedInitial.sort((a, b) => b.timestamp - a.timestamp).slice(0, MAX_NOTIFICATIONS);
     case NotificationActionTypes.ADD: {
       const { newNotification } = action.payload;
       if (newNotification.productId) {
-        const existingUnreadLowStockNotification = state.notifications.find(
+        const existingUnreadLowStockNotification = currentNotifications.find(
           (n) => n.productId === newNotification.productId && !n.read && n.message.includes("أوشك على النفاد")
         );
         if (existingUnreadLowStockNotification) {
-          return state; 
+          return currentNotifications; 
         }
       }
-      let updatedNotifications = [newNotification, ...state.notifications];
+      let updatedNotifications = [newNotification, ...currentNotifications];
       updatedNotifications = pruneOldReadNotifications(updatedNotifications);
       updatedNotifications = updatedNotifications
         .sort((a, b) => b.timestamp - a.timestamp)
         .slice(0, MAX_NOTIFICATIONS);
-      return { ...state, notifications: updatedNotifications };
+      return updatedNotifications;
     }
     case NotificationActionTypes.MARK_READ:
-      return {
-        ...state,
-        notifications: state.notifications.map((n) =>
+      return currentNotifications.map((n) =>
           n.id === action.payload.notificationId ? { ...n, read: true } : n
-        ),
-      };
+        );
     case NotificationActionTypes.MARK_ALL_READ:
-      return {
-        ...state,
-        notifications: state.notifications.map((n) => ({ ...n, read: true })),
-      };
+      return currentNotifications.map((n) => ({ ...n, read: true }));
     case NotificationActionTypes.CLEAR_ALL:
-      return {
-        notifications: [],
-        isLoaded: state.isLoaded, // Keep isLoaded true, just clear the data
-      };
+      return [];
     case NotificationActionTypes.DELETE_BY_PRODUCT_ID:
-      return {
-        ...state,
-        notifications: state.notifications.filter(n => n.productId !== action.payload.productId),
-      };
+      return currentNotifications.filter(n => n.productId !== action.payload.productId);
     default:
-      return state;
+      return currentNotifications;
   }
 }
 
-function dispatch(action: NotificationAction) {
-  memoryState = notificationsReducer(memoryState, action);
+function dispatchNotification(action: NotificationAction) { // Renamed dispatch to dispatchNotification
+  memoryState = {
+      ...memoryState,
+      notifications: notificationsReducer(memoryState.notifications, action),
+  };
+
+  if (action.type === NotificationActionTypes.SET_LOADED) {
+    memoryState.isLoaded = true;
+  }
+
   if (memoryState.isLoaded) {
     try {
       if (action.type === NotificationActionTypes.CLEAR_ALL) {
@@ -135,7 +128,7 @@ export function useNotificationsStorage() {
       } catch (error) {
         console.error("Failed to load notifications from localStorage:", error);
       }
-      dispatch({ type: NotificationActionTypes.SET_LOADED, payload: initialNotifications });
+      dispatchNotification({ type: NotificationActionTypes.SET_LOADED, payload: initialNotifications });
     }
     
     const listener = (newState: NotificationsState) => setState(newState);
@@ -166,24 +159,29 @@ export function useNotificationsStorage() {
       productId,
       href,
     };
-    dispatch({ type: NotificationActionTypes.ADD, payload: { newNotification } });
+    dispatchNotification({ type: NotificationActionTypes.ADD, payload: { newNotification } });
   }, []);
 
   const markAsRead = useCallback((notificationId: string) => {
-    dispatch({ type: NotificationActionTypes.MARK_READ, payload: { notificationId } });
+    dispatchNotification({ type: NotificationActionTypes.MARK_READ, payload: { notificationId } });
   }, []);
 
   const markAllAsRead = useCallback(() => {
-    dispatch({ type: NotificationActionTypes.MARK_ALL_READ });
+    dispatchNotification({ type: NotificationActionTypes.MARK_ALL_READ });
   }, []);
   
   const clearAllNotifications = useCallback(() => {
-    dispatch({ type: NotificationActionTypes.CLEAR_ALL });
+    dispatchNotification({ type: NotificationActionTypes.CLEAR_ALL });
   }, []);
 
   const deleteNotificationsByProductId = useCallback((productId: string) => {
-    dispatch({ type: NotificationActionTypes.DELETE_BY_PRODUCT_ID, payload: { productId } });
+    dispatchNotification({ type: NotificationActionTypes.DELETE_BY_PRODUCT_ID, payload: { productId } });
   }, []);
+
+  const notificationsDispatch = useCallback((action: NotificationAction) => {
+    dispatchNotification(action);
+  },[]);
+
 
   const allSortedNotifications = useMemo(() => {
      return state.notifications;
@@ -201,8 +199,8 @@ export function useNotificationsStorage() {
     markAllAsRead,
     clearAllNotifications,
     deleteNotificationsByProductId,
+    dispatchNotification: notificationsDispatch, // Expose dispatch for direct use
     unreadCount,
     isLoaded: state.isLoaded,
   };
 }
-

@@ -2,7 +2,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import Link from 'next/link';
-import { Home, Archive, ClipboardList, LineChart as LineChartIcon, History, Download } from 'lucide-react'; // Added Download
+import { Home, Archive, ClipboardList, LineChart as LineChartIcon, History, Download, Upload } from 'lucide-react'; // Added Upload
 import {
   SidebarProvider,
   Sidebar,
@@ -16,6 +16,7 @@ import {
 import { Toaster } from "@/components/ui/toaster";
 import { AppHeader } from '@/components/bouzid-store/app-header';
 import { SidebarExportButton } from '@/components/bouzid-store/sidebar-export-button';
+import { SidebarRestoreButton } from '@/components/bouzid-store/sidebar-restore-button'; // New import
 import './globals.css';
 
 const geistSans = Geist({
@@ -86,7 +87,7 @@ export default function RootLayout({
                       </SidebarMenuButton>
                     </Link>
                   </SidebarMenuItem>
-                  {/* Export Data button component now comes before Backup Log */}
+                  
                   <SidebarExportButton />
                   <SidebarMenuItem>
                     <Link href="/backup-log" legacyBehavior passHref>
@@ -96,6 +97,7 @@ export default function RootLayout({
                       </SidebarMenuButton>
                     </Link>
                   </SidebarMenuItem>
+                  <SidebarRestoreButton /> {/* Added Restore Button */}
                 </SidebarMenu>
               </SidebarContent>
             </Sidebar>

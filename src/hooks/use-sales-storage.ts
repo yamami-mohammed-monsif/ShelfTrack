@@ -34,51 +34,45 @@ type SalesAction =
   | { type: typeof SalesActionTypes.DELETE_SALE; payload: { saleId: string } }
   | { type: typeof SalesActionTypes.CLEAR_ALL_SALES };
 
-function salesReducer(state: SalesState, action: SalesAction): SalesState {
+function salesReducer(currentSales: Sale[], action: SalesAction): Sale[] { // Changed from state to currentSales array
   switch (action.type) {
     case SalesActionTypes.SET_LOADED:
-      return {
-        sales: action.payload.sort((a, b) => b.saleTimestamp - a.saleTimestamp),
-        isSalesLoaded: true,
-      };
+      return action.payload.sort((a, b) => b.saleTimestamp - a.saleTimestamp);
     case SalesActionTypes.ADD_SALE:
-      return {
-        ...state,
-        sales: [action.payload.newSale, ...state.sales].sort((a, b) => b.saleTimestamp - a.saleTimestamp),
-      };
+      return [action.payload.newSale, ...currentSales].sort((a, b) => b.saleTimestamp - a.saleTimestamp);
     case SalesActionTypes.EDIT_SALE: {
-      return {
-        ...state,
-        sales: state.sales.map(sale => {
-          if (sale.id === action.payload.saleId) {
-            return {
-              ...sale,
-              quantitySold: action.payload.updatedData.quantitySold,
-              saleTimestamp: new Date(action.payload.updatedData.saleTimestamp).getTime(),
-              totalSaleAmount: sale.retailPricePerUnitSnapshot * action.payload.updatedData.quantitySold,
-            };
-          }
-          return sale;
-        }).sort((a, b) => b.saleTimestamp - a.saleTimestamp),
-      };
+      return currentSales.map(sale => {
+        if (sale.id === action.payload.saleId) {
+          return {
+            ...sale,
+            quantitySold: action.payload.updatedData.quantitySold,
+            saleTimestamp: new Date(action.payload.updatedData.saleTimestamp).getTime(),
+            totalSaleAmount: sale.retailPricePerUnitSnapshot * action.payload.updatedData.quantitySold,
+          };
+        }
+        return sale;
+      }).sort((a, b) => b.saleTimestamp - a.saleTimestamp);
     }
     case SalesActionTypes.DELETE_SALE:
-      return {
-        ...state,
-        sales: state.sales.filter(s => s.id !== action.payload.saleId),
-      };
+      return currentSales.filter(s => s.id !== action.payload.saleId);
     case SalesActionTypes.CLEAR_ALL_SALES:
-      return {
-        sales: [],
-        isSalesLoaded: state.isSalesLoaded,
-      };
+      return [];
     default:
-      return state;
+      return currentSales;
   }
 }
 
 function dispatchSales(action: SalesAction) {
-  memoryStateSales = salesReducer(memoryStateSales, action);
+  memoryStateSales = {
+      ...memoryStateSales,
+      sales: salesReducer(memoryStateSales.sales, action),
+  };
+
+  if (action.type === SalesActionTypes.SET_LOADED) {
+    memoryStateSales.isSalesLoaded = true;
+  }
+
+
   if (memoryStateSales.isSalesLoaded) {
     try {
       if (action.type === SalesActionTypes.CLEAR_ALL_SALES) {
@@ -169,6 +163,10 @@ export function useSalesStorage() {
     dispatchSales({ type: SalesActionTypes.CLEAR_ALL_SALES });
   }, []);
 
+  const salesDispatch = useCallback((action: SalesAction) => {
+     dispatchSales(action);
+  },[]);
+
   const sortedSales = useMemo(() => {
     return state.sales; 
   }, [state.sales]);
@@ -179,8 +177,8 @@ export function useSalesStorage() {
     editSale,
     deleteSale,
     getSaleById,
-    clearAllSales, 
+    clearAllSales,
+    dispatchSales: salesDispatch, // Expose dispatch for direct use like SET_LOADED
     isSalesLoaded: state.isSalesLoaded 
   };
 }
-

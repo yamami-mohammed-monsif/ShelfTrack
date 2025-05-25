@@ -13,7 +13,6 @@ interface ProductsState {
   isLoaded: boolean;
 }
 
-// --- Module-level shared state and logic ---
 let memoryState: ProductsState = {
   products: [],
   isLoaded: false,
@@ -26,7 +25,7 @@ export const ProductActionTypes = {
   ADD: 'ADD_PRODUCT',
   EDIT: 'EDIT_PRODUCT',
   DECREASE_QUANTITY: 'DECREASE_PRODUCT_QUANTITY',
-  INCREASE_QUANTITY: 'INCREASE_PRODUCT_QUANTITY', // New action type
+  INCREASE_QUANTITY: 'INCREASE_PRODUCT_QUANTITY',
   DELETE: 'DELETE_PRODUCT',
   CLEAR_ALL: 'CLEAR_ALL_PRODUCTS',
 } as const;
@@ -34,37 +33,33 @@ export const ProductActionTypes = {
 type ProductAction =
   | { type: typeof ProductActionTypes.SET_LOADED; payload: Product[] }
   | { type: typeof ProductActionTypes.ADD; payload: { newProduct: Product } }
-  | { type: typeof ProductActionTypes.EDIT; payload: { productId: string; updatedData: ProductFormData; productBeforeUpdate: Product } }
-  | { type: typeof ProductActionTypes.DECREASE_QUANTITY; payload: { productId: string; quantityToDecrease: number; productBeforeUpdate: Product } }
-  | { type: typeof ProductActionTypes.INCREASE_QUANTITY; payload: { productId: string; quantityToIncrease: number; productBeforeUpdate: Product } } // New action
+  | { type: typeof ProductActionTypes.EDIT; payload: { productId: string; updatedData: ProductFormData } }
+  | { type: typeof ProductActionTypes.DECREASE_QUANTITY; payload: { productId: string; quantityToDecrease: number } }
+  | { type: typeof ProductActionTypes.INCREASE_QUANTITY; payload: { productId: string; quantityToIncrease: number } }
   | { type: typeof ProductActionTypes.DELETE; payload: { productId: string } }
   | { type: typeof ProductActionTypes.CLEAR_ALL };
 
 
 function productsReducer(
-  state: ProductsState,
+  currentProducts: Product[], // Changed from state to currentProducts array
   action: ProductAction,
   createLowStockNotificationFn?: (product: Product) => void
-): ProductsState {
+): Product[] { // Returns the new products array
   switch (action.type) {
     case ProductActionTypes.SET_LOADED:
-      return {
-        products: action.payload.sort((a, b) => b.timestamp - a.timestamp),
-        isLoaded: true,
-      };
+      return action.payload.sort((a, b) => b.timestamp - a.timestamp);
     case ProductActionTypes.ADD: {
       const { newProduct } = action.payload;
-      const updatedProducts = [newProduct, ...state.products].sort((a, b) => b.timestamp - a.timestamp);
       if (isLowStock(newProduct) && createLowStockNotificationFn) {
         createLowStockNotificationFn(newProduct);
       }
-      return { ...state, products: updatedProducts };
+      return [newProduct, ...currentProducts].sort((a, b) => b.timestamp - a.timestamp);
     }
     case ProductActionTypes.EDIT: {
+      const productBeforeUpdate = currentProducts.find(p => p.id === action.payload.productId);
       let productAfterUpdate: Product | undefined;
-      const { productBeforeUpdate } = action.payload;
       
-      const newProducts = state.products.map((product) => {
+      const newProducts = currentProducts.map((product) => {
         if (product.id === action.payload.productId) {
           productAfterUpdate = {
             ...product,
@@ -74,7 +69,7 @@ function productsReducer(
           return productAfterUpdate;
         }
         return product;
-      }).sort((a, b) => b.timestamp - a.timestamp);
+      });
 
       if (productAfterUpdate && productBeforeUpdate && createLowStockNotificationFn) {
         const wasPreviouslyLow = wasLowStock(productBeforeUpdate.type, productBeforeUpdate.quantity);
@@ -83,13 +78,13 @@ function productsReducer(
           createLowStockNotificationFn(productAfterUpdate);
         }
       }
-      return { ...state, products: newProducts };
+      return newProducts.sort((a, b) => b.timestamp - a.timestamp);
     }
     case ProductActionTypes.DECREASE_QUANTITY: {
+      const productBeforeUpdate = currentProducts.find(p => p.id === action.payload.productId);
       let productAfterUpdate: Product | undefined;
-      const { productBeforeUpdate } = action.payload;
 
-      const newProducts = state.products.map((product) => {
+      const newProducts = currentProducts.map((product) => {
         if (product.id === action.payload.productId) {
           productAfterUpdate = {
             ...product,
@@ -99,7 +94,7 @@ function productsReducer(
           return productAfterUpdate;
         }
         return product;
-      }).sort((a, b) => b.timestamp - a.timestamp);
+      });
       
       if (productAfterUpdate && productBeforeUpdate && createLowStockNotificationFn) {
         const wasPreviouslyLow = wasLowStock(productBeforeUpdate.type, productBeforeUpdate.quantity);
@@ -108,44 +103,32 @@ function productsReducer(
           createLowStockNotificationFn(productAfterUpdate);
         }
       }
-      return { ...state, products: newProducts };
+      return newProducts.sort((a, b) => b.timestamp - a.timestamp);
     }
-     case ProductActionTypes.INCREASE_QUANTITY: { // New reducer case
-      let productAfterUpdate: Product | undefined;
-      const { productBeforeUpdate } = action.payload;
-
-      const newProducts = state.products.map((product) => {
+     case ProductActionTypes.INCREASE_QUANTITY: {
+      const newProducts = currentProducts.map((product) => {
         if (product.id === action.payload.productId) {
-          productAfterUpdate = {
+          return {
             ...product,
             quantity: product.quantity + action.payload.quantityToIncrease,
             timestamp: Date.now(),
           };
-          return productAfterUpdate;
         }
         return product;
-      }).sort((a, b) => b.timestamp - a.timestamp);
-      
-      // Check if it's no longer low stock - optionally remove notification, but simple for now.
-      // Low stock notifications primarily trigger when becoming low.
-      return { ...state, products: newProducts };
+      });
+      return newProducts.sort((a, b) => b.timestamp - a.timestamp);
     }
     case ProductActionTypes.DELETE:
-      return {
-        ...state,
-        products: state.products.filter(p => p.id !== action.payload.productId),
-      };
+      return currentProducts.filter(p => p.id !== action.payload.productId);
     case ProductActionTypes.CLEAR_ALL:
-      return {
-        products: [],
-        isLoaded: state.isLoaded,
-      };
+      return [];
     default:
-      return state;
+      return currentProducts;
   }
 }
 
 function dispatch(action: ProductAction, addNotificationFn?: (message: string, productId?: string, href?: string) => void, deleteNotificationsByProductIdFn?: (productId: string) => void) {
+  
   const createLowStockNotificationForReducer = addNotificationFn 
     ? (product: Product) => {
         const message = `"${product.name}" أوشك على النفاد. الكمية المتبقية: ${product.quantity.toLocaleString()} ${unitSuffix[product.type]}.`;
@@ -153,20 +136,20 @@ function dispatch(action: ProductAction, addNotificationFn?: (message: string, p
       }
     : undefined;
 
-  let productBeforeUpdateForAction: Product | undefined;
-  if (action.type === ProductActionTypes.EDIT || action.type === ProductActionTypes.DECREASE_QUANTITY || action.type === ProductActionTypes.INCREASE_QUANTITY) {
-    productBeforeUpdateForAction = memoryState.products.find(p => p.id === action.payload.productId);
-  }
-  
-  const actionWithBeforeUpdate = productBeforeUpdateForAction 
-    ? { ...action, payload: { ...action.payload, productBeforeUpdate: productBeforeUpdateForAction } } 
-    : action;
-
-  memoryState = productsReducer(memoryState, actionWithBeforeUpdate as ProductAction, createLowStockNotificationForReducer);
+  memoryState = {
+    ...memoryState,
+    products: productsReducer(memoryState.products, action, createLowStockNotificationForReducer),
+  };
   
   if (action.type === ProductActionTypes.DELETE && deleteNotificationsByProductIdFn) {
     deleteNotificationsByProductIdFn(action.payload.productId);
   }
+  
+  // Ensure isLoaded is true after initial load or any modification
+  if (action.type === ProductActionTypes.SET_LOADED) {
+    memoryState.isLoaded = true;
+  }
+
 
   if (memoryState.isLoaded) {
     try {
@@ -200,6 +183,7 @@ export function useProductsStorage() {
       } catch (error) {
         console.error("Failed to load products from localStorage:", error);
       }
+      // Pass addNotification and deleteNotificationsByProductId for use in dispatch
       dispatch({ type: ProductActionTypes.SET_LOADED, payload: initialProducts }, addNotification, deleteNotificationsByProductId);
     }
     
@@ -238,25 +222,17 @@ export function useProductsStorage() {
   }, [addNotification, deleteNotificationsByProductId]);
 
   const editProduct = useCallback((productId: string, updatedData: ProductFormData): Product | undefined => {
-    const productBeforeUpdate = memoryState.products.find(p => p.id === productId);
-    if (!productBeforeUpdate) return undefined;
-
-    dispatch({ type: ProductActionTypes.EDIT, payload: { productId, updatedData, productBeforeUpdate } }, addNotification, deleteNotificationsByProductId);
+    dispatch({ type: ProductActionTypes.EDIT, payload: { productId, updatedData } }, addNotification, deleteNotificationsByProductId);
     return memoryState.products.find(p => p.id === productId);
   }, [addNotification, deleteNotificationsByProductId]);
 
   const decreaseProductQuantity = useCallback((productId: string, quantityToDecrease: number): Product | undefined => {
-    const productBeforeUpdate = memoryState.products.find(p => p.id === productId);
-    if (!productBeforeUpdate) return undefined;
-
-    dispatch({ type: ProductActionTypes.DECREASE_QUANTITY, payload: { productId, quantityToDecrease, productBeforeUpdate } }, addNotification, deleteNotificationsByProductId);
+    dispatch({ type: ProductActionTypes.DECREASE_QUANTITY, payload: { productId, quantityToDecrease } }, addNotification, deleteNotificationsByProductId);
     return memoryState.products.find(p => p.id === productId);
   }, [addNotification, deleteNotificationsByProductId]);
 
   const increaseProductQuantity = useCallback((productId: string, quantityToIncrease: number): Product | undefined => {
-    const productBeforeUpdate = memoryState.products.find(p => p.id === productId);
-    if (!productBeforeUpdate) return undefined;
-    dispatch({ type: ProductActionTypes.INCREASE_QUANTITY, payload: { productId, quantityToIncrease, productBeforeUpdate } }, addNotification, deleteNotificationsByProductId);
+    dispatch({ type: ProductActionTypes.INCREASE_QUANTITY, payload: { productId, quantityToIncrease } }, addNotification, deleteNotificationsByProductId);
     return memoryState.products.find(p => p.id === productId);
   }, [addNotification, deleteNotificationsByProductId]);
 
@@ -272,6 +248,10 @@ export function useProductsStorage() {
     dispatch({ type: ProductActionTypes.CLEAR_ALL }, addNotification, deleteNotificationsByProductId);
   }, [addNotification, deleteNotificationsByProductId]);
   
+  const productsDispatch = useCallback((action: ProductAction) => {
+     dispatch(action, addNotification, deleteNotificationsByProductId);
+  },[addNotification, deleteNotificationsByProductId]);
+
 
   return { 
     products: state.products, 
@@ -281,7 +261,9 @@ export function useProductsStorage() {
     increaseProductQuantity, 
     getProductById, 
     deleteProduct,
-    clearAllProducts, 
+    clearAllProducts,
+    dispatch: productsDispatch, // Expose dispatch for direct use like SET_LOADED
     isLoaded: state.isLoaded 
   };
 }
+

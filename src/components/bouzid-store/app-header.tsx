@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle,
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Menu, Bell, RotateCcw, Home, Archive, ClipboardList, LineChart as LineChartIcon, Download, History } from 'lucide-react';
+import { Menu, Bell, RotateCcw, Home, Archive, ClipboardList, LineChart as LineChartIcon, Download, History, Upload } from 'lucide-react'; // Added Upload
 import { useNotificationsStorage } from '@/hooks/use-notifications-storage';
 import { useProductsStorage } from '@/hooks/use-products-storage';
 import { useSalesStorage } from '@/hooks/use-sales-storage';
@@ -18,6 +18,8 @@ import { formatDistanceToNow, startOfWeek, endOfWeek, format as formatDateFns } 
 import { arSA } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import type { Notification, Product, Sale } from '@/lib/types';
+import { triggerRestoreFileInput } from '@/components/bouzid-store/sidebar-restore-button'; // Import trigger function
+
 
 export function AppHeader() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, isLoaded: notificationsLoaded, clearAllNotifications: clearAllNotificationData } = useNotificationsStorage();
@@ -147,7 +149,7 @@ export function AppHeader() {
                           className={cn(
                             "block p-3 hover:bg-muted/50",
                             !notification.read && "bg-primary/10",
-                            !notification.href && "cursor-default pointer-events-none"
+                            !notification.href && "cursor-default" // removed pointer-events-none for Link
                           )}
                         >
                           <p className={cn(
@@ -180,6 +182,7 @@ export function AppHeader() {
 
           {/* Desktop-only Reset Button */}
           <div className="hidden md:flex items-center">
+             {/* Desktop Export Data Button - Removed from here, moved to SidebarExportButton */}
             <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
               <AlertDialogTrigger asChild>
                 <Button variant="ghost" className="text-primary-foreground hover:bg-red-500/90 hover:text-white px-2 sm:px-3 py-2">
@@ -253,7 +256,7 @@ export function AppHeader() {
                       </Link>
                     </Button>
                   </SheetClose>
-                  <SheetClose asChild>
+                   <SheetClose asChild>
                     <Button asChild variant="ghost" className="justify-start text-lg text-foreground hover:bg-accent hover:text-accent-foreground w-full">
                       <Link href="/backup-log">
                         <History className="me-3 h-5 w-5" />
@@ -265,11 +268,25 @@ export function AppHeader() {
                   <div className="pt-4 mt-4 border-t border-border">
                       <Button
                         variant="ghost"
-                        onClick={handleDownloadData} // Export Data button in mobile menu
+                        onClick={() => {
+                            handleDownloadData();
+                            setIsMobileMenuOpen(false);
+                        }}
                         className="justify-start text-lg text-foreground hover:bg-accent hover:text-accent-foreground w-full"
                       >
                         <Download className="me-3 h-5 w-5" />
                         تصدير البيانات
+                      </Button>
+                       <Button
+                        variant="ghost"
+                        onClick={() => {
+                            triggerRestoreFileInput(); // Call imported function
+                            setIsMobileMenuOpen(false);
+                        }}
+                        className="justify-start text-lg text-foreground hover:bg-accent hover:text-accent-foreground w-full"
+                      >
+                        <Upload className="me-3 h-5 w-5" />
+                        استعادة البيانات
                       </Button>
                       <Button
                         variant="ghost"
@@ -292,4 +309,3 @@ export function AppHeader() {
     </header>
   );
 }
-
