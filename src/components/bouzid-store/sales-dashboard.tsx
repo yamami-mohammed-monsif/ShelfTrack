@@ -1,18 +1,19 @@
 
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SalesTable } from '@/components/bouzid-store/sales-table';
-import type { Product, Sale } from '@/lib/types';
+import type { Product } from '@/lib/types';
 import { DollarSign, ShoppingCart, Package, AlertTriangle, List, ArrowLeft, TrendingUp } from 'lucide-react';
 import { useSalesStorage } from '@/hooks/use-sales-storage';
 import { isLowStock } from '@/lib/product-utils';
 import {
   startOfDay, endOfDay,
   isWithinInterval,
+  isSameDay, // Import isSameDay
 } from 'date-fns';
 // import { arSA } from 'date-fns/locale'; // arSA not strictly needed for interval checks unless week starts on different day
 import { cn } from '@/lib/utils';
@@ -24,7 +25,18 @@ interface SalesDashboardProps {
 export function SalesDashboard({ products }: SalesDashboardProps) {
   const { sales, isSalesLoaded } = useSalesStorage();
   
-  const now = useMemo(() => new Date(), []);
+  const [todayRefDate, setTodayRefDate] = useState(new Date());
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      const newCurrentDate = new Date();
+      if (!isSameDay(todayRefDate, newCurrentDate)) {
+        setTodayRefDate(newCurrentDate); // Update the reference date if the day has changed
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(intervalId);
+  }, [todayRefDate]);
 
   const dailyStats = useMemo(() => {
     if (!isSalesLoaded) return {
@@ -32,14 +44,14 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
       todayProfit: 0,
     };
 
-    const todayStart = startOfDay(now);
-    const todayEnd = endOfDay(now);
+    const todayStart = startOfDay(todayRefDate); // Use todayRefDate for current day's start
+    const todayEnd = endOfDay(todayRefDate);     // Use todayRefDate for current day's end
     
     const salesToday = sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: todayStart, end: todayEnd }));
 
     const todaySalesValue = salesToday.reduce((sum, s) => sum + s.totalSaleAmount, 0);
     const todayProfit = salesToday.reduce((sum, s) => {
-      const profitPerSale = (s.retailPricePerUnitSnapshot - s.wholesalePricePerUnitSnapshot) * s.quantitySold;
+      const profitPerSale = (s.retailPricePerUnitSnapshot - (s.wholesalePricePerUnitSnapshot || 0)) * s.quantitySold;
       return sum + (Number.isNaN(profitPerSale) ? 0 : profitPerSale);
     }, 0);
 
@@ -47,7 +59,7 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
       todaySalesValue,
       todayProfit,
     };
-  }, [sales, isSalesLoaded, now]);
+  }, [sales, isSalesLoaded, todayRefDate]); // Add todayRefDate as a dependency
 
   const totalProductsInStock = products.length;
   const lowStockProductsCount = useMemo(() => products.filter(p => isLowStock(p)).length, [products]);
@@ -150,3 +162,4 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
     </div>
   );
 }
+
