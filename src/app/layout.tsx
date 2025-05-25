@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Toaster } from "@/components/ui/toaster";
 import { AppHeader } from '@/components/bouzid-store/app-header';
-import { SidebarExportButton } from '@/components/bouzid-store/sidebar-export-button'; // Import the new component
+import { SidebarExportButton } from '@/components/bouzid-store/sidebar-export-button';
 import './globals.css';
 
 const geistSans = Geist({
@@ -86,6 +86,8 @@ export default function RootLayout({
                       </SidebarMenuButton>
                     </Link>
                   </SidebarMenuItem>
+                  {/* Export Data button component now comes before Backup Log */}
+                  <SidebarExportButton />
                   <SidebarMenuItem>
                     <Link href="/backup-log" legacyBehavior passHref>
                       <SidebarMenuButton tooltip={{ children: "سجل النسخ", side: "left" }} aria-label="سجل النسخ">
@@ -94,8 +96,6 @@ export default function RootLayout({
                       </SidebarMenuButton>
                     </Link>
                   </SidebarMenuItem>
-                  {/* Add the new export button component here */}
-                  <SidebarExportButton />
                 </SidebarMenu>
               </SidebarContent>
             </Sidebar>
