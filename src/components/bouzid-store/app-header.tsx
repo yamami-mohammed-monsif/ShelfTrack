@@ -45,7 +45,7 @@ export function AppHeader() {
     <header className="bg-primary text-primary-foreground p-4 shadow-md sticky top-0 z-50">
       <div className="container mx-auto flex justify-between items-center">
         <Link href="/" legacyBehavior passHref>
-          <a className="text-2xl font-bold hover:opacity-90 transition-opacity">متجر بوزيد</a>
+          <a className="text-2xl font-bold hover:opacity-90 transition-opacity">ShelfTrack</a>
         </Link>
 
         <div className="flex items-center gap-2">

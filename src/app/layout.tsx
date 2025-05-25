@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'متجر بوزيد', // Bouzid Store in Arabic
-  description: 'تطبيق متجر بوزيد لإدارة المنتجات وتحليل المبيعات', // Bouzid Store app for product management and sales analysis
+  title: 'ShelfTrack', // Updated from 'متجر بوزيد'
+  description: 'تطبيق ShelfTrack لإدارة المنتجات وتحليل المبيعات', // Updated description
 };
 
 export default function RootLayout({
