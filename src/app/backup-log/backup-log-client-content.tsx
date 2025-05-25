@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useBackupLogStorage } from '@/hooks/use-backup-log-storage';
 import type { BackupLogEntry } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -20,8 +20,13 @@ import { arSA } from 'date-fns/locale';
 
 export default function BackupLogClientContent() {
   const { backupLogs, isLoaded } = useBackupLogStorage();
+  const [hasMounted, setHasMounted] = useState(false);
 
-  if (!isLoaded) {
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  if (!hasMounted || !isLoaded) {
     return (
       <div className="flex flex-col min-h-screen bg-background">
         {/* AppHeader is handled globally in layout.tsx */}
