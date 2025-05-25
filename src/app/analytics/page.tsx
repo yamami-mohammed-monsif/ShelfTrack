@@ -4,15 +4,25 @@
 import React, { useState, useMemo } from 'react';
 import { AppHeader } from '@/components/bouzid-store/app-header';
 import { useSalesStorage } from '@/hooks/use-sales-storage';
-import type { Sale } from '@/lib/types';
+import { useProductsStorage } from '@/hooks/use-products-storage'; // Import products hook
+import type { Sale, Product } from '@/lib/types'; // Import Product type
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, TooltipProps } from 'recharts';
 import { ChartContainer, ChartTooltipContent, ChartLegendContent } from '@/components/ui/chart';
-import { Filter, LineChart as LineChartIcon, CalendarDays } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableCaption,
+} from '@/components/ui/table';
+import { Filter, LineChart as LineChartIcon, CalendarDays, Star } from 'lucide-react';
 import {
   format,
-  parseISO,
+  // parseISO, // Not used directly in this version of chartData processing
   startOfDay,
   endOfDay,
   startOfWeek,
@@ -20,7 +30,7 @@ import {
   startOfMonth,
   endOfMonth,
   startOfYear,
-  // endOfYear, // Not strictly needed if we go up to 'now' for current year/month
+  // endOfYear,
   startOfHour,
   endOfHour,
   eachHourOfInterval,
@@ -29,16 +39,25 @@ import {
   eachWeekOfInterval,
   eachMonthOfInterval,
   isWithinInterval,
-  min, // To ensure we don't plot future days for current month/year
+  min,
 } from 'date-fns';
 import { arSA } from 'date-fns/locale';
+import { unitSuffix } from '@/lib/product-utils'; // Import unitSuffix
 
 type SalesAnalyticsTimeframe = 'daily' | 'weekly' | 'monthly' | 'last3months' | 'last6months' | 'yearly';
 
 interface SalesAnalyticsChartDataPoint {
-  dateLabel: string; // Formatted date for X-axis
+  dateLabel: string;
   totalSales: number;
-  tooltipLabel?: string; // For more detailed tooltip date/range
+  tooltipLabel?: string;
+}
+
+interface TopPerformingProduct {
+  productId: string;
+  productName: string;
+  totalQuantitySold: number;
+  unit: string;
+  totalProfit: number;
 }
 
 const timeframeLabels: Record<SalesAnalyticsTimeframe, string> = {
@@ -68,24 +87,62 @@ const CustomSalesAnalyticsTooltip = ({ active, payload, label }: TooltipProps<nu
 
 export default function SalesAnalyticsPage() {
   const { sales, isSalesLoaded } = useSalesStorage();
+  const { products, isLoaded: isProductsLoaded } = useProductsStorage();
   const [activeTimeframe, setActiveTimeframe] = useState<SalesAnalyticsTimeframe>('monthly');
+
+  const salesTimeInterval = useMemo(() => {
+    const now = new Date();
+    let start: Date;
+    let end: Date;
+
+    switch (activeTimeframe) {
+      case 'daily':
+        start = startOfDay(now);
+        end = endOfDay(now);
+        break;
+      case 'weekly':
+        start = startOfDay(subDays(now, 6));
+        end = endOfDay(now);
+        break;
+      case 'monthly':
+        start = startOfMonth(now);
+        end = min([now, endOfMonth(now)]);
+        break;
+      case 'last3months':
+        start = startOfDay(subDays(now, 89));
+        end = endOfDay(now);
+        break;
+      case 'last6months':
+        start = startOfDay(subDays(now, 179));
+        end = endOfDay(now);
+        break;
+      case 'yearly':
+        start = startOfYear(now);
+        end = endOfMonth(now); // up to end of current month for current year
+        break;
+      default: // Should not happen
+        start = now;
+        end = now;
+    }
+    return { start, end };
+  }, [activeTimeframe]);
 
   const chartData = useMemo(() => {
     if (!isSalesLoaded || sales.length === 0) return [];
 
     const now = new Date();
     let aggregatedData: SalesAnalyticsChartDataPoint[] = [];
+    const { start: intervalStart, end: intervalEnd } = salesTimeInterval;
+
+    const relevantSales = sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: intervalStart, end: intervalEnd }));
 
     switch (activeTimeframe) {
-      case 'daily': { // Today's sales, hour-by-hour
-        const todayStart = startOfDay(now);
-        const todayEnd = endOfDay(now);
-        const hoursToday = eachHourOfInterval({ start: todayStart, end: todayEnd });
-
+      case 'daily': {
+        const hoursToday = eachHourOfInterval({ start: intervalStart, end: intervalEnd });
         aggregatedData = hoursToday.map(hour => {
           const hourStart = startOfHour(hour);
           const hourEnd = endOfHour(hour);
-          const hourSales = sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: hourStart, end: hourEnd }));
+          const hourSales = relevantSales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: hourStart, end: hourEnd }));
           return {
             dateLabel: format(hour, 'HH:00', { locale: arSA }),
             tooltipLabel: `الساعة: ${format(hour, 'HH:00', { locale: arSA })} - ${format(hourEnd, 'HH:59', { locale: arSA })}`,
@@ -94,50 +151,42 @@ export default function SalesAnalyticsPage() {
         });
         break;
       }
-      case 'weekly': { // Last 7 days (including today), day-by-day
-        const startDate = startOfDay(subDays(now, 6));
-        const endDate = endOfDay(now);
-        const days = eachDayOfInterval({ start: startDate, end: endDate });
-
+      case 'weekly': {
+        const days = eachDayOfInterval({ start: intervalStart, end: intervalEnd });
         aggregatedData = days.map(day => {
           const dayStart = startOfDay(day);
           const dayEnd = endOfDay(day);
-          const daySales = sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: dayStart, end: dayEnd }));
+          const daySales = relevantSales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: dayStart, end: dayEnd }));
           return {
-            dateLabel: format(day, 'EEE d', { locale: arSA }), // e.g., الأحد 5
+            dateLabel: format(day, 'EEE d', { locale: arSA }),
             tooltipLabel: format(day, 'MMMM d, yyyy', { locale: arSA }),
             totalSales: daySales.reduce((sum, s) => sum + s.totalSaleAmount, 0),
           };
         });
         break;
       }
-      case 'monthly': { // Current calendar month, day-by-day (up to today)
-        const monthStart = startOfMonth(now);
-        const monthActualEnd = min([now, endOfMonth(now)]); // Data up to today or end of month if past
-        const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthActualEnd });
-        
+      case 'monthly': {
+        const daysInMonth = eachDayOfInterval({ start: intervalStart, end: intervalEnd });
         aggregatedData = daysInMonth.map(day => {
           const dayStart = startOfDay(day);
           const dayEnd = endOfDay(day);
-          const daySales = sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: dayStart, end: dayEnd }));
+          const daySales = relevantSales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: dayStart, end: dayEnd }));
           return {
-            dateLabel: format(day, 'd', { locale: arSA }), // e.g., 15
+            dateLabel: format(day, 'd', { locale: arSA }),
             tooltipLabel: format(day, 'MMMM d, yyyy', { locale: arSA }),
             totalSales: daySales.reduce((sum, s) => sum + s.totalSaleAmount, 0),
           };
         });
         break;
       }
-      case 'last3months': { // Last 90 rolling days, week-by-week
-        const startDateRough = subDays(now, 89);
-        const firstWeekStart = startOfWeek(startDateRough, { locale: arSA });
-        const lastWeekEnd = endOfWeek(now, { locale: arSA });
-        
+      case 'last3months':
+      case 'last6months': {
+        const firstWeekStart = startOfWeek(intervalStart, { locale: arSA });
+        const lastWeekEnd = endOfWeek(intervalEnd, { locale: arSA });
         const weeks = eachWeekOfInterval({ start: firstWeekStart, end: lastWeekEnd }, { weekStartsOn: arSA.options?.weekStartsOn });
-        
         aggregatedData = weeks.map(weekStart => {
           const weekEnd = endOfWeek(weekStart, { locale: arSA });
-          const weekSales = sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: weekStart, end: weekEnd }));
+          const weekSales = relevantSales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: weekStart, end: weekEnd }));
           return {
             dateLabel: format(weekStart, 'MMM d', { locale: arSA }),
             tooltipLabel: `أسبوع ${format(weekStart, 'MMM d', { locale: arSA })} - ${format(weekEnd, 'MMM d, yyyy', { locale: arSA })}`,
@@ -146,32 +195,11 @@ export default function SalesAnalyticsPage() {
         });
         break;
       }
-      case 'last6months': { // Last 180 rolling days, week-by-week
-        const startDateRough = subDays(now, 179);
-        const firstWeekStart = startOfWeek(startDateRough, { locale: arSA });
-        const lastWeekEnd = endOfWeek(now, { locale: arSA });
-
-        const weeks = eachWeekOfInterval({ start: firstWeekStart, end: lastWeekEnd }, { weekStartsOn: arSA.options?.weekStartsOn });
-        
-        aggregatedData = weeks.map(weekStart => {
-          const weekEnd = endOfWeek(weekStart, { locale: arSA });
-          const weekSales = sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: weekStart, end: weekEnd }));
-          return {
-            dateLabel: format(weekStart, 'MMM d', { locale: arSA }),
-            tooltipLabel: `أسبوع ${format(weekStart, 'MMM d', { locale: arSA })} - ${format(weekEnd, 'MMM d, yyyy', { locale: arSA })}`,
-            totalSales: weekSales.reduce((sum, s) => sum + s.totalSaleAmount, 0),
-          };
-        });
-        break;
-      }
-      case 'yearly': { // Current calendar year, month-by-month (up to current month)
-        const yearStart = startOfYear(now);
-        const currentMonthEnd = endOfMonth(now); // Data up to end of current month
-        const monthsInYear = eachMonthOfInterval({ start: yearStart, end: currentMonthEnd });
-        
-         aggregatedData = monthsInYear.map(monthStart => {
-          const monthEnd = endOfMonth(monthStart);
-          const monthSales = sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: monthStart, end: monthEnd }));
+      case 'yearly': {
+        const monthsInYear = eachMonthOfInterval({ start: intervalStart, end: intervalEnd });
+        aggregatedData = monthsInYear.map(monthStart => {
+          const monthEndPeriod = endOfMonth(monthStart);
+          const monthSales = relevantSales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: monthStart, end: monthEndPeriod }));
           return {
             dateLabel: format(monthStart, 'MMM', { locale: arSA }),
             tooltipLabel: format(monthStart, 'MMMM yyyy', { locale: arSA }),
@@ -182,7 +210,48 @@ export default function SalesAnalyticsPage() {
       }
     }
     return aggregatedData;
-  }, [sales, isSalesLoaded, activeTimeframe]);
+  }, [sales, isSalesLoaded, activeTimeframe, salesTimeInterval]);
+
+  const topPerformingProductsData = useMemo((): TopPerformingProduct[] => {
+    if (!isSalesLoaded || !isProductsLoaded || sales.length === 0 || products.length === 0) return [];
+
+    const { start: intervalStart, end: intervalEnd } = salesTimeInterval;
+    const relevantSales = sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: intervalStart, end: intervalEnd }));
+
+    const productPerformance: Record<string, {
+      productId: string;
+      productName: string;
+      productType?: Product['type'];
+      totalQuantitySold: number;
+      totalProfit: number;
+    }> = {};
+
+    relevantSales.forEach(sale => {
+      if (!productPerformance[sale.productId]) {
+        const productDetails = products.find(p => p.id === sale.productId);
+        productPerformance[sale.productId] = {
+          productId: sale.productId,
+          productName: productDetails?.name || sale.productNameSnapshot,
+          productType: productDetails?.type,
+          totalQuantitySold: 0,
+          totalProfit: 0,
+        };
+      }
+      productPerformance[sale.productId].totalQuantitySold += sale.quantitySold;
+      const profitPerSale = (sale.retailPricePerUnitSnapshot - (sale.wholesalePricePerUnitSnapshot || 0)) * sale.quantitySold;
+      productPerformance[sale.productId].totalProfit += isNaN(profitPerSale) ? 0 : profitPerSale;
+    });
+
+    return Object.values(productPerformance)
+      .map(p => ({
+        ...p,
+        unit: p.productType ? unitSuffix[p.productType] : '',
+      }))
+      .sort((a, b) => b.totalProfit - a.totalProfit)
+      .slice(0, 10);
+
+  }, [sales, products, activeTimeframe, isSalesLoaded, isProductsLoaded, salesTimeInterval]);
+
 
   const chartConfig = {
     totalSales: {
@@ -191,7 +260,7 @@ export default function SalesAnalyticsPage() {
     },
   };
 
-  if (!isSalesLoaded) {
+  if (!isSalesLoaded || !isProductsLoaded) {
     return (
       <div className="flex flex-col min-h-screen bg-background">
         <AppHeader />
@@ -240,7 +309,7 @@ export default function SalesAnalyticsPage() {
                       margin={{
                         top: 5,
                         right: 20,
-                        left: -10, 
+                        left: -10,
                         bottom: 5,
                       }}
                     >
@@ -257,8 +326,8 @@ export default function SalesAnalyticsPage() {
                         axisLine={false}
                         tickMargin={8}
                         domain={['auto', 'auto']}
-                        allowDecimals={false}
-                        width={80} 
+                        allowDecimals={true}
+                        width={80}
                       />
                       <Tooltip
                         content={<CustomSalesAnalyticsTooltip />}
@@ -296,6 +365,56 @@ export default function SalesAnalyticsPage() {
               </div>
             )}
           </CardContent>
+        </Card>
+
+        <Card className="shadow-lg rounded-lg">
+            <CardHeader>
+                <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                    <Star className="h-6 w-6 text-primary" />
+                    <CardTitle className="text-xl">أفضل 10 منتجات أداءً</CardTitle>
+                </div>
+                <CardDescription>
+                    المنتجات الأكثر ربحية خلال الفترة الزمنية المحددة: {timeframeLabels[activeTimeframe]}
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0 md:p-4">
+                {topPerformingProductsData.length > 0 ? (
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableCaption className="py-4">
+                                يتم ترتيب المنتجات حسب إجمالي الربح المحقق.
+                            </TableCaption>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="rtl:text-right">المنتج</TableHead>
+                                    <TableHead className="text-center">الكمية المباعة</TableHead>
+                                    <TableHead className="text-center">الربح المحقق</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {topPerformingProductsData.map((product) => (
+                                    <TableRow key={product.productId}>
+                                        <TableCell className="font-medium rtl:text-right">
+                                            {product.productName}
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            {product.totalQuantitySold.toLocaleString()} {product.unit}
+                                        </TableCell>
+                                        <TableCell className="text-center font-semibold">
+                                            {product.totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                ) : (
+                    <div className="text-center py-10 text-muted-foreground">
+                        <CalendarDays className="mx-auto h-12 w-12 mb-4" />
+                        <p>لا توجد بيانات منتجات لعرضها لهذه الفترة الزمنية.</p>
+                    </div>
+                )}
+            </CardContent>
         </Card>
       </main>
     </div>
