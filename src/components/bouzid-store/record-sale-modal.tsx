@@ -52,13 +52,13 @@ interface RecordSaleModalProps {
 const createSaleFormSchema = (allProducts: Product[]) => z.object({
   productId: z.string().min(1, { message: 'الرجاء اختيار منتج.' }),
   quantitySold: z.coerce
-    .number({ 
+    .number({
       required_error: "الكمية المباعة مطلوبة.",
       invalid_type_error: "الكمية المباعة يجب أن تكون رقماً صالحاً."
     })
     .positive({ message: 'الكمية المباعة يجب أن تكون أكبر من صفر.' }),
   saleTimestamp: z.string().refine(val => {
-    if (!val) return false; 
+    if (!val) return false;
     const date = new Date(val);
     return !isNaN(date.getTime());
   }, {
@@ -77,9 +77,9 @@ const createSaleFormSchema = (allProducts: Product[]) => z.object({
     });
     return;
   }
-  
+
   if (typeof values.quantitySold !== 'number' || Number.isNaN(values.quantitySold)) {
-     if (values.quantitySold !== undefined) { 
+     if (values.quantitySold !== undefined) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "الكمية المباعة يجب أن تكون رقماً صالحاً.",
@@ -97,7 +97,7 @@ const createSaleFormSchema = (allProducts: Product[]) => z.object({
       path: ['quantitySold'],
     });
   }
-  
+
   if (values.quantitySold > product.quantity) {
      ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -119,17 +119,17 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
   }, [products]);
 
   const form = useForm<SaleFormData>({
-    resolver: zodResolver(createSaleFormSchema(productsRef.current)), 
+    resolver: zodResolver(createSaleFormSchema(productsRef.current)),
     defaultValues: {
       productId: '',
-      quantitySold: undefined, 
-      saleTimestamp: new Date().toISOString().slice(0, 16), 
+      quantitySold: undefined,
+      saleTimestamp: new Date().toISOString().slice(0, 16),
     },
   });
-  
+
   useEffect(() => {
     form.reset(form.getValues(), {
-      // @ts-ignore 
+      // @ts-ignore
       resolver: zodResolver(createSaleFormSchema(productsRef.current)),
     });
   }, [products, form]);
@@ -160,20 +160,20 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
   const handleProductSelect = (product: Product) => {
     form.setValue('productId', product.id, { shouldValidate: true });
     setSelectedProduct(product);
-    setSearchValue(product.name); 
+    setSearchValue(product.name);
     setComboboxOpen(false);
-    
+
     const currentQuantityInput = form.getValues('quantitySold');
     let newQuantity: number | undefined = currentQuantityInput;
 
     if (currentQuantityInput === undefined || currentQuantityInput <=0) {
         newQuantity = product.quantity > 0 ? 1 : undefined;
     } else if (currentQuantityInput > product.quantity) {
-        newQuantity = product.quantity > 0 ? 1 : undefined; 
+        newQuantity = product.quantity > 0 ? 1 : undefined;
     } else if (product.type === 'unit' && !Number.isInteger(currentQuantityInput)) {
         newQuantity = Math.floor(currentQuantityInput) || (product.quantity > 0 ? 1 : undefined);
     }
-    
+
     form.setValue('quantitySold', newQuantity, { shouldValidate: true });
     form.clearErrors('productId');
   };
@@ -186,15 +186,15 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
 
   const quantityStep = useMemo(() => {
     if (selectedProduct?.type === 'unit') return '1';
-    return '0.01'; 
+    return '0.01';
   }, [selectedProduct]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       if (!open) onClose();
-      setComboboxOpen(false); 
+      setComboboxOpen(false);
     }}>
-      <DialogContent className="sm:max-w-md bg-card text-card-foreground">
+      <DialogContent className="sm:max-w-md bg-card text-card-foreground flex flex-col max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="text-center text-xl">تسجيل عملية بيع</DialogTitle>
           <DialogDescription className="text-center">
@@ -202,7 +202,10 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-4">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-6 p-4 overflow-y-auto flex-grow"
+          >
             <FormField
               control={form.control}
               name="productId"
@@ -235,7 +238,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                     </PopoverTrigger>
                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-[250px] overflow-y-auto">
                       <Command>
-                        <CommandInput 
+                        <CommandInput
                           placeholder="ابحث عن منتج..."
                           value={searchValue}
                           onValueChange={setSearchValue}
@@ -245,7 +248,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                           <CommandGroup>
                             {filteredProducts.map((product) => (
                               <CommandItem
-                                value={product.name} 
+                                value={product.name}
                                 key={product.id}
                                 onSelect={() => handleProductSelect(product)}
                               >
@@ -288,10 +291,10 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                 <FormItem>
                   <FormLabel>الكمية المباعة</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="number" 
-                      placeholder="0" 
-                      {...field} 
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      {...field}
                       disabled={!selectedProduct}
                       step={quantityStep}
                       value={field.value === undefined || Number.isNaN(Number(field.value)) ? "" : field.value}
@@ -331,7 +334,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                 </FormItem>
               )}
             />
-            
+
             {selectedProduct && form.watch("quantitySold") > 0 && !Number.isNaN(form.watch("quantitySold")) && (
               <div className="text-lg font-semibold text-center p-2 bg-muted rounded-md">
                 الإجمالي: {(selectedProduct.retailPrice * (form.watch("quantitySold") || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
@@ -339,7 +342,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
             )}
 
 
-            <DialogFooter className="pt-6">
+            <DialogFooter className="pt-6 sticky bottom-0 bg-card border-t border-border z-10 -mx-4 px-4 pb-4">
               <Button type="button" variant="outline" onClick={onClose}>
                 إلغاء
               </Button>

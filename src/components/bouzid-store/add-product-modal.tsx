@@ -40,19 +40,19 @@ const createProductFormSchema = () => z.object({
     required_error: 'يجب اختيار نوع المنتج.',
   }),
   wholesalePrice: z.coerce
-    .number({ 
+    .number({
       required_error: "سعر الجملة مطلوب.",
-      invalid_type_error: "سعر الجملة يجب أن يكون رقماً صالحاً." 
+      invalid_type_error: "سعر الجملة يجب أن يكون رقماً صالحاً."
     })
     .positive({ message: 'سعر الجملة يجب أن يكون إيجابياً.' }),
   retailPrice: z.coerce
-    .number({ 
+    .number({
       required_error: "سعر البيع مطلوب.",
-      invalid_type_error: "سعر البيع يجب أن يكون رقماً صالحاً." 
+      invalid_type_error: "سعر البيع يجب أن يكون رقماً صالحاً."
     })
     .positive({ message: 'سعر البيع يجب أن يكون إيجابياً.' }),
   quantity: z.coerce
-    .number({ 
+    .number({
       required_error: "الكمية مطلوبة.",
       invalid_type_error: "الكمية يجب أن تكون رقماً صالحاً."
     })
@@ -88,9 +88,9 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
     defaultValues: {
       name: '',
       type: 'unit',
-      wholesalePrice: undefined, 
+      wholesalePrice: undefined,
       retailPrice: undefined,
-      quantity: undefined,     
+      quantity: undefined,
     },
   });
 
@@ -103,7 +103,7 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
         retailPrice: undefined,
         quantity: undefined,
       });
-      setCurrentProductType('unit'); 
+      setCurrentProductType('unit');
     }
   }, [isOpen, form]);
 
@@ -117,12 +117,12 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
 
   const quantityStep = useMemo(() => {
     if (currentProductType === 'unit') return '1';
-    return '0.01'; 
+    return '0.01';
   }, [currentProductType]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[425px] bg-card text-card-foreground">
+      <DialogContent className="sm:max-w-[425px] bg-card text-card-foreground flex flex-col max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="text-center text-xl">إضافة منتج جديد</DialogTitle>
           <DialogDescription className="text-center">
@@ -130,7 +130,10 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-4">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-4 p-4 overflow-y-auto flex-grow"
+          >
             <FormField
               control={form.control}
               name="name"
@@ -157,9 +160,9 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                         const newType = value as ProductType;
                         field.onChange(newType);
                         setCurrentProductType(newType);
-                        form.setValue('quantity', form.getValues('quantity'), { shouldValidate: true }); 
+                        form.setValue('quantity', form.getValues('quantity'), { shouldValidate: true });
                       }}
-                      value={field.value} 
+                      value={field.value}
                       className="flex flex-col space-y-1"
                     >
                       <FormItem className="flex items-center space-s-3 space-y-0">
@@ -186,7 +189,7 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                 </FormItem>
               )}
             />
-            
+
             <div className="flex items-center space-s-2">
                <IconComponent className="h-5 w-5 text-muted-foreground" />
                <span className="text-sm text-muted-foreground">
@@ -201,20 +204,20 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                 <FormItem>
                   <FormLabel>سعر الجملة ({selectedUnitLabels.price})</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="number" 
-                      step="0.01" 
-                      placeholder="0.00" 
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
                       {...field}
                       value={field.value === undefined || Number.isNaN(Number(field.value)) ? "" : field.value}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         const valueAsString = e.target.value;
                         if (valueAsString === "" || valueAsString === "-") {
-                          field.onChange(undefined); 
+                          field.onChange(undefined);
                         } else {
                           const valueAsNum = e.target.valueAsNumber;
                           if (Number.isNaN(valueAsNum)) {
-                            field.onChange(valueAsString); 
+                            field.onChange(valueAsString);
                           } else {
                             field.onChange(valueAsNum);
                           }
@@ -226,7 +229,7 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="retailPrice"
@@ -234,20 +237,20 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                 <FormItem>
                   <FormLabel>سعر البيع (التجزئة) ({selectedUnitLabels.price})</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="number" 
-                      step="0.01" 
-                      placeholder="0.00" 
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
                       {...field}
                       value={field.value === undefined || Number.isNaN(Number(field.value)) ? "" : field.value}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         const valueAsString = e.target.value;
                         if (valueAsString === "" || valueAsString === "-") {
-                          field.onChange(undefined); 
+                          field.onChange(undefined);
                         } else {
                           const valueAsNum = e.target.valueAsNumber;
                           if (Number.isNaN(valueAsNum)) {
-                            field.onChange(valueAsString); 
+                            field.onChange(valueAsString);
                           } else {
                             field.onChange(valueAsNum);
                           }
@@ -267,11 +270,11 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
                 <FormItem>
                   <FormLabel>الكمية المشتراة ({selectedUnitLabels.quantity})</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="number" 
-                      step={quantityStep} 
-                      placeholder="0" 
-                      {...field} 
+                    <Input
+                      type="number"
+                      step={quantityStep}
+                      placeholder="0"
+                      {...field}
                       value={field.value === undefined || Number.isNaN(Number(field.value)) ? "" : field.value}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         const valueAsString = e.target.value;
@@ -293,7 +296,7 @@ export function AddProductModal({ isOpen, onClose, onAddProduct }: AddProductMod
               )}
             />
 
-            <DialogFooter className="pt-6">
+            <DialogFooter className="pt-6 sticky bottom-0 bg-card border-t border-border z-10 -mx-4 px-4 pb-4">
               <Button type="button" variant="outline" onClick={onClose}>
                 إلغاء
               </Button>
