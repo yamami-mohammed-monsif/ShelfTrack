@@ -14,6 +14,20 @@ if (!supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Interface representing the structure of a row in your Supabase 'products' table
+// It's good practice to use snake_case for database column names.
+export interface ProductRow {
+  id: string; // uuid, primary key
+  name: string; // text, NOT NULL
+  type: 'powder' | 'liquid' | 'unit'; // text, NOT NULL, CHECK constraint
+  wholesale_price: number; // float8, NOT NULL, CHECK (>=0)
+  retail_price: number; // float8, NOT NULL, CHECK (>=0)
+  quantity: number; // float8, NOT NULL, CHECK (>=0)
+  created_at: string; // timestamptz, NOT NULL, default now()
+  updated_at: string; // timestamptz, NOT NULL, default now() (auto-updates via trigger)
+  // user_id?: string; // Optional: uuid, foreign key to auth.users if implementing RLS
+}
+
 // Example of how you might define types for your tables,
 // which you can generate from your Supabase schema later.
 // export interface ProductRow {

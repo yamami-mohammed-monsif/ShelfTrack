@@ -2,13 +2,14 @@
 export type ProductType = 'powder' | 'liquid' | 'unit';
 
 export interface Product {
-  id: string;
+  id: string; // uuid from Supabase
   name: string;
   type: ProductType;
   wholesalePrice: number; // This is the purchase price per unit
   retailPrice: number;    // This is the selling price per unit
   quantity: number;
-  timestamp: number; // Unix timestamp (milliseconds) of last update/creation
+  created_at: string; // ISO 8601 string from Supabase
+  updated_at: string; // ISO 8601 string from Supabase
 }
 
 export interface ProductFormData {
@@ -27,7 +28,7 @@ export interface Sale {
   wholesalePricePerUnitSnapshot: number; // Snapshot of product wholesale price at sale time
   retailPricePerUnitSnapshot: number; // Snapshot of product retail price at sale time
   totalSaleAmount: number; // Calculated based on retailPricePerUnitSnapshot * quantitySold
-  saleTimestamp: number; // Unix timestamp (milliseconds)
+  saleTimestamp: number; // Unix timestamp (milliseconds) - Will likely change to string for Supabase
 }
 
 export interface SaleFormData {
@@ -53,7 +54,7 @@ export interface SalesDataPoint {
 export interface Notification {
   id: string;
   message: string;
-  timestamp: number;
+  timestamp: number; // Unix timestamp (milliseconds) - Will likely change to string for Supabase
   read: boolean;
   productId?: string; // To link to a product for specific notifications like low stock
   href?: string; // Optional link for the notification (e.g., to product page)
