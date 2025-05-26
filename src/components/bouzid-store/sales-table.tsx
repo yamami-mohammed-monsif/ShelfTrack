@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react'; // Added useMemo import
 import {
   Table,
   TableBody,
@@ -41,7 +41,8 @@ export function SalesTable({
   showCaption = true,
 }: SalesTableProps) {
 
-  const allSaleItemsWithDetails = useMemo(() => {
+  const allSaleItemsWithDetails: DisplayableSaleItem[] = useMemo(() => {
+    if (!sales) return [];
     return sales.flatMap(transaction =>
       (transaction.items || []).map(item => ({
         ...item,
