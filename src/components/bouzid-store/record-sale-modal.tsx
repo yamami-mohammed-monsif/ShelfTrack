@@ -38,7 +38,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
+// ScrollArea removed as cart will use DialogContent's scroll
 import type { AddToCartFormData, Product, CartItem, Sale } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { unitSuffix } from '@/lib/product-utils';
@@ -118,7 +118,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
     // @ts-ignore
     addItemForm.resolver = zodResolver(createAddItemFormSchema(productsRef.current, cartItemsRef.current));
     addItemForm.trigger();
-  }, [products, cartItems]);
+  }, [products, cartItems, addItemForm]);
 
 
   useEffect(() => {
@@ -222,14 +222,14 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
       id: finalSaleId,
       sale_timestamp: saleTimestamp,
       items: cartItems.map(cartItem => ({
-        id: crypto.randomUUID(), // This is for the SaleItem record
-        sale_id: finalSaleId, // Link back to the main Sale transaction
+        id: crypto.randomUUID(), 
+        sale_id: finalSaleId, 
         product_id: cartItem.product_id,
         productNameSnapshot: cartItem.productNameSnapshot,
         quantitySold: cartItem.quantitySold,
         wholesalePricePerUnitSnapshot: cartItem.wholesalePricePerUnitSnapshot,
         retailPricePerUnitSnapshot: cartItem.retailPricePerUnitSnapshot,
-        itemTotalAmount: cartItem.itemTotalAmount, // retailPricePerUnitSnapshot * quantitySold
+        itemTotalAmount: cartItem.itemTotalAmount, 
         productType: cartItem.productType,
       })),
       total_transaction_amount: grandTotal,
@@ -250,7 +250,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       if (!open) onClose();
-      setProductComboboxOpen(false); // Ensure combobox popover closes when dialog closes
+      setProductComboboxOpen(false); 
     }}>
       <DialogContent className="sm:max-w-lg bg-card text-card-foreground flex flex-col max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader className="mb-2 text-center">
@@ -339,7 +339,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                           }
                         }}
                         disabled={!addItemForm.getValues('productId')}
-                        className="min-h-[2.5rem]"
+                        className="min-h-[2.5rem]" // Removed text-center
                       />
                     </FormControl>
                     <FormMessage />
@@ -359,10 +359,8 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
           </form>
         </Form>
 
-        <ScrollArea className="border rounded-md p-1 mb-4 bg-muted/20">
-          {cartItems.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">السلة فارغة</p>
-          ) : (
+        {cartItems.length > 0 && (
+          <div className="border rounded-md p-1 mb-4 bg-muted/20"> {/* Container for cart, keeps styling */}
             <div className="space-y-3 p-2">
               <h3 className="text-md font-semibold flex items-center sticky top-0 bg-muted/20 py-1 -mt-2 -mx-2 px-2 border-b mb-3 z-10">
                 <ListOrdered className="me-2 h-5 w-5 text-primary"/>السلة ({cartItems.length})
@@ -381,8 +379,9 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                 </div>
               ))}
             </div>
-          )}
-        </ScrollArea>
+          </div>
+        )}
+
 
         {cartItems.length > 0 && (
           <div className="text-lg font-bold p-3 border bg-muted/50 rounded-md text-center mb-4">
@@ -425,4 +424,3 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
     </Dialog>
   );
 }
-
