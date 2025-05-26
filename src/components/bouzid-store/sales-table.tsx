@@ -15,8 +15,8 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible"; // Changed from Accordion
-import { Button } from '@/components/ui/button'; // For the trigger button
+} from "@/components/ui/collapsible";
+import { Button } from '@/components/ui/button';
 import type { Sale } from '@/lib/types';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
@@ -61,7 +61,7 @@ export function SalesTable({
         </TableHeader>
         <TableBody>
           {sales.map((transaction) => (
-            <Collapsible asChild key={transaction.id}>
+            <Collapsible key={transaction.id}>
               <>
                 <TableRow className="hover:bg-muted/30 data-[state=open]:bg-muted/40">
                   <TableCell className="font-medium rtl:text-right">
