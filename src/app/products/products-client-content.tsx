@@ -164,16 +164,17 @@ export default function ProductsClientContent() {
                           {products.map((product) => (
                             <CommandItem
                               key={product.id}
-                              value={product.name}
-                              onSelect={(currentValue) => {
-                                setSearchTerm(currentValue === searchTerm ? "" : currentValue);
+                              value={product.name} // value is used by CMDK for filtering/searching within the list
+                              onSelect={() => { // Use product.name for setting search term
+                                const newSearchTerm = product.name === searchTerm ? "" : product.name;
+                                setSearchTerm(newSearchTerm);
                                 setComboboxOpen(false);
                               }}
                             >
                               <Check
                                 className={cn(
                                   "me-2 h-4 w-4",
-                                  searchTerm.toLowerCase() === product.name.toLowerCase() ? "opacity-100" : "opacity-0"
+                                  searchTerm === product.name ? "opacity-100" : "opacity-0"
                                 )}
                               />
                               {product.name}
@@ -196,13 +197,7 @@ export default function ProductsClientContent() {
                     onClick={() => setActiveFilter(filterKey)}
                     className="px-3 py-1 h-auto m-1"
                   >
-                    {filterLabels[filterKey]} ({filterKey === 'all'
-                      ? productCounts.all
-                      : products.filter(p => {
-                          if (filterKey === 'low-stock') return isLowStock(p);
-                          return p.type === filterKey;
-                        }).length
-                    })
+                    {filterLabels[filterKey]} ({productCounts[filterKey]})
                   </Button>
                 ))}
               </div>
@@ -226,5 +221,6 @@ export default function ProductsClientContent() {
     </div>
   );
 }
+    
 
     
