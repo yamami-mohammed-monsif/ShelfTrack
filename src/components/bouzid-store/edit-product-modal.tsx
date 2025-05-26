@@ -55,7 +55,6 @@ const createProductFormSchema = () => z.object({
   quantity: z.coerce
     .number({
       required_error: "الكمية مطلوبة.",
-      invalid_type_error: "الكمية يجب أن تكون رقماً صالحاً."
     })
     .positive({ message: 'الكمية يجب أن تكون إيجابية.' }), // Changed from nonNegative to positive
 }).superRefine((values, ctx) => {

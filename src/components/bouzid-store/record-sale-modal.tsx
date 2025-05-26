@@ -53,19 +53,14 @@ interface RecordSaleModalProps {
 }
 
 const createAddItemFormSchema = (allProducts: Product[], currentCartItems: CartItem[]) => z.object({
-  productId: z.string(), // Removed .min(1)
+  productId: z.string(), 
   quantity: z.coerce
     .number({
       required_error: "الكمية مطلوبة.",
-      invalid_type_error: "الكمية يجب أن تكون رقماً." // Custom message for coercion failure
     })
     .positive({ message: 'الكمية يجب أن تكون أكبر من صفر.' }),
 }).superRefine((values, ctx) => {
   if (!values.productId) {
-    // This case should ideally be prevented by UI (disabled button if no product ID)
-    // but if it somehow gets here, it's an issue.
-    // Since .min(1) is removed, an empty string for productId won't fail the base string check.
-    // We rely on the button disabled state for this.
     return;
   }
 
@@ -76,11 +71,6 @@ const createAddItemFormSchema = (allProducts: Product[], currentCartItems: CartI
   }
 
   if (typeof values.quantity !== 'number' || Number.isNaN(values.quantity)) {
-    if (values.quantity !== undefined) { 
-      // This specific message might be overridden by invalid_type_error if coercion failed.
-      // If invalid_type_error is set, "الكمية يجب أن تكون رقماً." will show.
-      // If it's undefined due to required_error, "الكمية مطلوبة." will show.
-    }
     return;
   }
 
@@ -157,7 +147,6 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
   const handleAddItemToCart = (data: AddToCartFormData) => {
     const product = products.find(p => p.id === data.productId);
     if (!product) {
-      // This should ideally be caught by Zod validation if product ID is invalid
       toast({ title: "خطأ", description: "المنتج غير موجود أو غير محدد.", variant: "destructive" });
       return;
     }
@@ -169,7 +158,6 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
         const existingItem = updatedCartItems[existingCartItemIndex];
         const newQuantity = existingItem.quantitySold + data.quantity;
         
-        // This check is also in Zod, but good for an immediate UI feedback if needed before submit
         if (newQuantity > product.quantity) {
             addItemForm.setError("quantity", { 
                 type: "manual", 
@@ -203,7 +191,6 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
     addItemForm.reset({ productId: '', quantity: undefined });
     setProductSearchValue(""); 
     addItemForm.clearErrors();
-    // addItemForm.setFocus('productId'); // Optionally refocus product selector
   };
   
   const handleRemoveItemFromCart = (tempId: string) => {
@@ -435,5 +422,3 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
     </Dialog>
   );
 }
-
-    
