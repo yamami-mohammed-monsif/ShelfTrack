@@ -2,7 +2,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import Link from 'next/link';
-import { Home, Archive, ClipboardList, LineChart as LineChartIcon, History, Download, Upload } from 'lucide-react'; // Added Upload
+import { Home, Archive, ClipboardList, LineChart as LineChartIcon, History, Download, RotateCcw } from 'lucide-react';
 import {
   SidebarProvider,
   Sidebar,
@@ -17,7 +17,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AppHeader } from '@/components/bouzid-store/app-header';
 import { SidebarExportButton } from '@/components/bouzid-store/sidebar-export-button';
 import { SidebarRestoreButton } from '@/components/bouzid-store/sidebar-restore-button';
-import { SidebarResetButton } from '@/components/bouzid-store/sidebar-reset-button'; // New import
+import { SidebarResetButton } from '@/components/bouzid-store/sidebar-reset-button';
 import './globals.css';
 
 const geistSans = Geist({
@@ -53,7 +53,6 @@ export default function RootLayout({
               className="hidden md:flex flex-col border-l bg-sidebar text-sidebar-foreground"
             >
               <SidebarRail /> {/* Allows clicking the edge to toggle expand/collapse */}
-              {/* SidebarContent padding adjusted to push icons down from the header */}
               <SidebarContent className="flex-grow p-2 pt-20 overflow-y-auto">
                 <SidebarMenu>
                   <SidebarMenuItem>
@@ -105,7 +104,6 @@ export default function RootLayout({
             </Sidebar>
 
             {/* Main content area that adjusts to the sidebar */}
-            {/* It needs top padding to account for the globally rendered AppHeader */}
             <SidebarInset className="flex-1 flex flex-col overflow-x-hidden pt-16"> {/* Added pt-16 */}
               {children}
             </SidebarInset>

@@ -4,13 +4,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { EditProductModal } from '@/components/bouzid-store/edit-product-modal';
-// EditSaleModal and related logic removed for now
-// import { EditSaleModal } from '@/components/bouzid-store/edit-sale-modal';
 import { SalesTable } from '@/components/bouzid-store/sales-table';
 import { useProductsStorage } from '@/hooks/use-products-storage';
 import { useSalesStorage } from '@/hooks/use-sales-storage';
 import { useToast } from '@/hooks/use-toast';
-import type { Product, ProductFormData, Sale, SaleItem } from '@/lib/types'; // EditSaleFormData removed
+import type { Product, ProductFormData, Sale, SaleItem } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
@@ -26,8 +24,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, TooltipProps } from 'recharts';
 import { ChartContainer, ChartTooltipContent, ChartLegendContent } from '@/components/ui/chart';
-import { Package, Edit3, DollarSign, TrendingUp, ListOrdered, CalendarDays, Trash2 } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { Package, Edit3, TrendingUp, ListOrdered, CalendarDays, Trash2 } from 'lucide-react';
+import { format, parseISO, isValid } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { productTypeLabels, unitSuffix } from '@/lib/product-utils';
 import { cn } from '@/lib/utils';
@@ -63,28 +61,16 @@ export default function ProductDetailPage() {
     getProductById,
     editProduct,
     deleteProduct,
-    // increaseProductQuantity, // Will be needed if sale edit/delete is re-added
-    // decreaseProductQuantity,
     isLoaded: productsLoaded,
   } = useProductsStorage();
   const {
-    sales: allSalesTransactions, // Renamed to reflect it's transactions
-    // editSale, // Removed for now
-    // deleteSale, // Removed for now
+    sales: allSalesTransactions,
     isSalesLoaded
   } = useSalesStorage();
 
   const [product, setProduct] = useState<Product | null | undefined>(null);
   const [isEditProductModalOpen, setIsEditProductModalOpen] = useState(false);
   const [isDeleteProductDialogOpen, setIsDeleteProductDialogOpen] = useState(false);
-
-  // State for EditSaleModal (removed for now)
-  // const [isEditSaleModalOpen, setIsEditSaleModalOpen] = useState(false);
-  // const [saleToEdit, setSaleToEdit] = useState<SaleItem | null>(null); // Would be SaleItem
-
-  // State for DeleteSaleDialog (removed for now)
-  // const [isDeleteSaleDialogOpen, setIsDeleteSaleDialogOpen] = useState(false);
-  // const [saleToDelete, setSaleToDelete] = useState<SaleItem | null>(null); // Would be SaleItem
 
 
   useEffect(() => {
@@ -104,18 +90,17 @@ export default function ProductDetailPage() {
     allSalesTransactions.forEach(transaction => {
       (transaction.items || []).forEach(item => {
         if (item.product_id === product.id) {
-          // Add transaction timestamp to item for sorting in chart/table if needed directly
           items.push({ ...item, transaction_timestamp: transaction.sale_timestamp } as SaleItem & {transaction_timestamp: number});
         }
       });
     });
-    return items.sort((a, b) => (b as any).transaction_timestamp - (a as any).transaction_timestamp); // Sort by most recent first
+    return items.sort((a, b) => (b as any).transaction_timestamp - (a as any).transaction_timestamp); 
   }, [allSalesTransactions, product, isSalesLoaded]);
 
   const salesChartData = useMemo(() => {
     return productSaleItems
       .slice()
-      .reverse() // For chart, sort by oldest first
+      .reverse() 
       .map(item => ({
         originalDate: new Date((item as any).transaction_timestamp).toISOString(),
         date: format(new Date((item as any).transaction_timestamp), 'MMM d', { locale: arSA }),
@@ -125,17 +110,11 @@ export default function ProductDetailPage() {
   
   const salesForTable = useMemo((): Sale[] => {
     if (!product || !isSalesLoaded) return [];
-    // Reconstruct Sale transactions that contain items of the current product
-    // This is needed if SalesTable expects full Sale[] objects with filtered items
-    // However, our SalesTable now flattens items. So we can pass allSalesTransactions
-    // and SalesTable will internally filter if we modify it, or we pass productSaleItems directly.
-    // For now, SalesTable takes Sale[] and flattens. Let's filter transactions.
     return allSalesTransactions
         .filter(transaction => (transaction.items || []).some(item => item.product_id === product.id))
         .map(transaction => ({
             ...transaction,
-            // Optionally, filter items within the transaction if SalesTable doesn't do it
-            // items: (transaction.items || []).filter(item => item.product_id === product.id)
+            items: (transaction.items || []).filter(item => item.product_id === product.id) 
         }))
         .sort((a,b) => b.sale_timestamp - a.sale_timestamp);
 
@@ -162,7 +141,7 @@ export default function ProductDetailPage() {
   const handleSaveEditedProduct = (id: string, data: ProductFormData) => {
     const edited = editProduct(id, data);
     if (edited) {
-      setProduct(edited);
+      setProduct(edited); // Update local product state for immediate UI reflection
       toast({
         title: "نجاح",
         description: `تم تعديل المنتج "${edited.name}" بنجاح.`,
@@ -191,8 +170,6 @@ export default function ProductDetailPage() {
     }
   };
 
-  // --- Sale Edit/Delete Handlers (Temporarily Removed) ---
-  // These need to be re-implemented considering the new Sale/SaleItem structure.
 
   if (!productsLoaded || !isSalesLoaded) {
     return (
@@ -285,7 +262,11 @@ export default function ProductDetailPage() {
               </div>
               <div className="col-span-2 sm:col-span-1">
                 <p className="text-muted-foreground">آخر تحديث للمنتج</p>
-                <p className="font-medium">{format(new Date(product.updated_at), 'PPpp', { locale: arSA })}</p>
+                <p className="font-medium">
+                  {product.updated_at && isValid(parseISO(product.updated_at))
+                    ? format(parseISO(product.updated_at), 'PPpp', { locale: arSA })
+                    : 'تاريخ غير متوفر'}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -375,10 +356,7 @@ export default function ProductDetailPage() {
           </CardHeader>
           <CardContent className="p-0 md:p-4">
             <SalesTable
-                sales={salesForTable} // Pass the filtered transactions
-                showActions={false} // Actions disabled for now
-                // onEditSaleTrigger={handleEditSaleTrigger} // Removed
-                // onDeleteSaleTrigger={handleDeleteSaleTrigger} // Removed
+                sales={salesForTable}
             />
           </CardContent>
         </Card>
@@ -392,8 +370,6 @@ export default function ProductDetailPage() {
           productToEdit={product}
         />
       )}
-
-      {/* EditSaleModal and AlertDialog for sale delete are removed for now */}
     </div>
   );
 }

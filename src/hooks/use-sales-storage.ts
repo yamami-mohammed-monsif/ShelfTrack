@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { Sale } from '@/lib/types'; // EditSaleFormData and Product removed as they are not used here directly
+import type { Sale, SaleItem } from '@/lib/types';
 
 const SALES_STORAGE_KEY = 'shelftrack_sales';
 
@@ -22,7 +22,6 @@ export const SalesActionTypes = {
   SET_LOADED: 'SET_LOADED_SALES',
   ADD_TRANSACTION: 'ADD_TRANSACTION',
   CLEAR_ALL_SALES: 'CLEAR_ALL_SALES',
-  // EDIT_TRANSACTION and DELETE_TRANSACTION would be needed for full CRUD
 } as const;
 
 type SalesAction =
@@ -38,10 +37,10 @@ function salesReducer(currentTransactions: Sale[], action: SalesAction): Sale[] 
       return action.payload
         .map(sale => ({
           ...sale,
-          id: sale.id || crypto.randomUUID(), // Ensure ID exists
+          id: sale.id || crypto.randomUUID(),
           sale_timestamp: typeof sale.sale_timestamp === 'number' && !isNaN(sale.sale_timestamp) ? sale.sale_timestamp : now,
           total_transaction_amount: typeof sale.total_transaction_amount === 'number' && !isNaN(sale.total_transaction_amount) ? sale.total_transaction_amount : 0,
-          items: Array.isArray(sale.items) ? sale.items.map(item => ({
+          items: Array.isArray(sale.items) ? sale.items.map((item: SaleItem) => ({ // Added type annotation for item
             ...item,
             id: item.id || crypto.randomUUID(),
             product_id: item.product_id || 'unknown_product',
@@ -50,14 +49,13 @@ function salesReducer(currentTransactions: Sale[], action: SalesAction): Sale[] 
             wholesalePricePerUnitSnapshot: typeof item.wholesalePricePerUnitSnapshot === 'number' && !isNaN(item.wholesalePricePerUnitSnapshot) ? item.wholesalePricePerUnitSnapshot : 0,
             retailPricePerUnitSnapshot: typeof item.retailPricePerUnitSnapshot === 'number' && !isNaN(item.retailPricePerUnitSnapshot) ? item.retailPricePerUnitSnapshot : 0,
             itemTotalAmount: typeof item.itemTotalAmount === 'number' && !isNaN(item.itemTotalAmount) ? item.itemTotalAmount : 0,
-            // productType can be optional
+            productType: item.productType || 'unit', // Default product type if missing
           })) : [],
           created_at: typeof sale.created_at === 'number' && !isNaN(sale.created_at) ? sale.created_at : now,
           updated_at: typeof sale.updated_at === 'number' && !isNaN(sale.updated_at) ? sale.updated_at : now,
         }))
         .sort((a, b) => b.sale_timestamp - a.sale_timestamp);
     case SalesActionTypes.ADD_TRANSACTION:
-      // Ensure the new transaction and its items also have valid IDs if not provided
       const newTransactionWithIds = {
         ...action.payload.newTransaction,
         id: action.payload.newTransaction.id || crypto.randomUUID(),
@@ -110,11 +108,10 @@ export function useSalesStorage() {
         const storedSales = localStorage.getItem(SALES_STORAGE_KEY);
         if (storedSales) {
           initialSales = JSON.parse(storedSales);
-          // Initial sanitization moved to reducer for consistency
         }
       } catch (error) {
         console.error("Failed to load sales from localStorage:", error);
-        initialSales = []; // Ensure it's an array on error
+        initialSales = [];
       }
       dispatchSales({ type: SalesActionTypes.SET_LOADED, payload: initialSales });
     }
@@ -136,7 +133,7 @@ export function useSalesStorage() {
 
   const addSaleTransaction = useCallback((newTransaction: Sale): Sale => {
     dispatchSales({ type: SalesActionTypes.ADD_TRANSACTION, payload: { newTransaction } });
-    return newTransaction; // Note: The actual object in memoryStateSales will have IDs if they were generated.
+    return newTransaction; 
   }, []);
 
 
