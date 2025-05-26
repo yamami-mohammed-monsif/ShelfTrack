@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   Table,
   TableBody,
@@ -11,11 +12,11 @@ import {
   TableCaption,
 } from '@/components/ui/table';
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"; // Changed from Accordion
+import { Button } from '@/components/ui/button'; // For the trigger button
 import type { Sale } from '@/lib/types';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
@@ -59,68 +60,68 @@ export function SalesTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          <Accordion type="multiple" className="w-full">
-            {sales.map((transaction) => (
-              <AccordionItem value={transaction.id} key={transaction.id} asChild>
-                <> {/* Use React.Fragment as child of AccordionItem */}
-                  <TableRow className="hover:bg-muted/30 data-[state=open]:bg-muted/40">
-                    <TableCell className="font-medium rtl:text-right">
-                      {typeof transaction.sale_timestamp === 'number' && !isNaN(transaction.sale_timestamp)
-                        ? format(new Date(transaction.sale_timestamp), 'yyyy-MM-dd HH:mm', { locale: arSA })
-                        : 'تاريخ غير صالح'}
-                    </TableCell>
-                    <TableCell className="rtl:text-right">{transaction.id.substring(0, 8).toUpperCase()}</TableCell>
-                    <TableCell className="text-center">{transaction.items.length}</TableCell>
-                    <TableCell className="text-center font-semibold">
-                      {transaction.total_transaction_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <AccordionTrigger className="p-2 hover:bg-accent/50 rounded-md w-full justify-center group [&[data-state=open]>svg]:rotate-180">
-                         <ChevronDown className="h-5 w-5 transition-transform duration-200" />
-                         <span className="sr-only">عرض التفاصيل</span>
-                      </AccordionTrigger>
+          {sales.map((transaction) => (
+            <Collapsible asChild key={transaction.id}>
+              <>
+                <TableRow className="hover:bg-muted/30 data-[state=open]:bg-muted/40">
+                  <TableCell className="font-medium rtl:text-right">
+                    {typeof transaction.sale_timestamp === 'number' && !isNaN(transaction.sale_timestamp)
+                      ? format(new Date(transaction.sale_timestamp), 'yyyy-MM-dd HH:mm', { locale: arSA })
+                      : 'تاريخ غير صالح'}
+                  </TableCell>
+                  <TableCell className="rtl:text-right">{transaction.id.substring(0, 8).toUpperCase()}</TableCell>
+                  <TableCell className="text-center">{transaction.items.length}</TableCell>
+                  <TableCell className="text-center font-semibold">
+                    {transaction.total_transaction_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="sm" className="w-full justify-center group p-2">
+                        <ChevronDown className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                        <span className="sr-only">عرض التفاصيل</span>
+                      </Button>
+                    </CollapsibleTrigger>
+                  </TableCell>
+                </TableRow>
+
+                <CollapsibleContent asChild>
+                  <TableRow className="bg-muted/10 hover:bg-muted/20">
+                    <TableCell colSpan={5} className="p-0 !border-0">
+                      <div className="p-4 space-y-2">
+                        <h4 className="font-semibold text-sm text-muted-foreground">المنتجات المباعة في هذه العملية:</h4>
+                        <Table className="bg-background rounded-md shadow-sm">
+                          <TableHeader>
+                            <TableRow className="border-b-0">
+                              <TableHead className="rtl:text-right">اسم المنتج</TableHead>
+                              <TableHead className="text-center">الكمية</TableHead>
+                              <TableHead className="text-center">سعر الوحدة</TableHead>
+                              <TableHead className="text-center">إجمالي المنتج</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {transaction.items.map((item) => (
+                              <TableRow key={item.id} className="border-b-0 last:border-b-0">
+                                <TableCell className="font-medium rtl:text-right">{item.productNameSnapshot}</TableCell>
+                                <TableCell className="text-center">
+                                  {item.quantitySold.toLocaleString()} {item.productType ? unitSuffix[item.productType] : ''}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  {item.retailPricePerUnitSnapshot.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
+                                </TableCell>
+                                <TableCell className="text-center font-semibold">
+                                  {item.itemTotalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
                     </TableCell>
                   </TableRow>
-
-                  <AccordionContent asChild>
-                    <TableRow className="bg-muted/10 hover:bg-muted/20">
-                      <TableCell colSpan={5} className="p-0 !border-0"> {/* Remove default padding/border if content handles it */}
-                        <div className="p-4 space-y-2"> {/* This div is now a valid child of TD */}
-                          <h4 className="font-semibold text-sm text-muted-foreground">المنتجات المباعة في هذه العملية:</h4>
-                          <Table className="bg-background rounded-md shadow-sm">
-                            <TableHeader>
-                              <TableRow className="border-b-0">
-                                <TableHead className="rtl:text-right">اسم المنتج</TableHead>
-                                <TableHead className="text-center">الكمية</TableHead>
-                                <TableHead className="text-center">سعر الوحدة</TableHead>
-                                <TableHead className="text-center">إجمالي المنتج</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {transaction.items.map((item) => (
-                                <TableRow key={item.id} className="border-b-0 last:border-b-0">
-                                  <TableCell className="font-medium rtl:text-right">{item.productNameSnapshot}</TableCell>
-                                  <TableCell className="text-center">
-                                    {item.quantitySold.toLocaleString()} {item.productType ? unitSuffix[item.productType] : ''}
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    {item.retailPricePerUnitSnapshot.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
-                                  </TableCell>
-                                  <TableCell className="text-center font-semibold">
-                                    {item.itemTotalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  </AccordionContent>
-                </>
-              </AccordionItem>
-            ))}
-          </Accordion>
+                </CollapsibleContent>
+              </>
+            </Collapsible>
+          ))}
         </TableBody>
       </Table>
     </div>
