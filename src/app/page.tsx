@@ -7,7 +7,7 @@ import { AddProductModal } from '@/components/bouzid-store/add-product-modal';
 import { RecordSaleModal } from '@/components/bouzid-store/record-sale-modal';
 import { useProductsStorage } from '@/hooks/use-products-storage';
 import { useSalesStorage } from '@/hooks/use-sales-storage';
-import type { ProductFormData } from '@/lib/types';
+import type { ProductFormData, Sale } from '@/lib/types'; // Updated to use Sale type
 import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
 import { Plus, ShoppingCart } from 'lucide-react';
@@ -38,23 +38,18 @@ export default function HomePage() {
     }
   };
 
-  const handleRecordSale = (productId: string, quantitySold: number, saleTimestamp: number) => {
-    const productSold = productsHook.products.find(p => p.id === productId);
-    if (!productSold) {
-      toast({
-        title: "خطأ",
-        description: "لم يتم العثور على المنتج.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const recordedSale = salesHook.addSale(productSold, quantitySold, saleTimestamp);
-    productsHook.decreaseProductQuantity(productId, quantitySold);
+  // Updated to accept a full Sale object
+  const handleRecordSale = (saleData: Sale) => { 
+    const recordedSale = salesHook.addSaleTransaction(saleData); // Use the correctly named function
+    
+    // Decrease product quantity for each item in the sale
+    saleData.items.forEach(item => {
+      productsHook.decreaseProductQuantity(item.product_id, item.quantitySold);
+    });
     
     toast({
       title: "نجاح",
-      description: `تم تسجيل بيع ${quantitySold} من "${productSold.name}" بنجاح.`,
+      description: `تم تسجيل عملية البيع رقم ${recordedSale.id.substring(0,8)} بنجاح بإجمالي ${recordedSale.total_transaction_amount.toLocaleString(undefined, {minimumFractionDigits:2})} د.ج.`,
       variant: "default",
     });
     console.log('Sale recorded:', recordedSale);
@@ -70,12 +65,11 @@ export default function HomePage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background w-full"> {/* Added w-full */}
-      <main className="flex-grow pb-28 w-full"> {/* Added w-full */}
+    <div className="flex flex-col min-h-screen bg-background w-full">
+      <main className="flex-grow pb-28 w-full">
         <SalesDashboard products={productsHook.products} />
       </main>
       
-      {/* Fixed Footer Buttons */}
       <div className="fixed bottom-0 start-0 end-0 p-4 bg-background border-t border-border shadow-lg z-40">
         <div className="flex gap-4">
           <Button 
@@ -105,7 +99,7 @@ export default function HomePage() {
       <RecordSaleModal
         isOpen={isRecordSaleModalOpen}
         onClose={() => setIsRecordSaleModalOpen(false)}
-        onRecordSale={handleRecordSale}
+        onRecordSale={handleRecordSale} // Prop now expects a Sale object
         products={productsHook.products}
       />
     </div>
