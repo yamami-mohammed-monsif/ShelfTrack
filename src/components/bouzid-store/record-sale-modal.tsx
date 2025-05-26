@@ -38,6 +38,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { Label } from '@/components/ui/label'; // Added import for basic Label
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -118,7 +119,8 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
   });
    
   useEffect(() => {
-    addItemForm.trigger(); // Re-validate when products or cartItems change
+    // Ensure resolver is updated if products or cartItems change, then re-trigger validation
+    addItemForm.trigger(); 
   }, [products, cartItems, addItemForm]);
 
 
@@ -142,7 +144,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
 
   const handleProductSelect = (product: Product) => {
     addItemForm.setValue('productId', product.id, { shouldValidate: true });
-    setProductSearchValue(product.name); // Set search value to selected product name
+    setProductSearchValue(product.name); 
     setProductComboboxOpen(false);
     addItemForm.setFocus('quantity');
     addItemForm.clearErrors('productId');
@@ -155,9 +157,6 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
       return;
     }
 
-    // Check if item already in cart, if so, update quantity (or replace for simplicity now)
-    // For now, we allow adding the same product multiple times as separate cart entries,
-    // or one could choose to merge them. Let's merge for a cleaner cart.
     const existingCartItemIndex = cartItems.findIndex(item => item.product_id === product.id);
 
     if (existingCartItemIndex > -1) {
@@ -165,7 +164,6 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
         const existingItem = updatedCartItems[existingCartItemIndex];
         const newQuantity = existingItem.quantitySold + data.quantity;
         
-        // Re-validate stock for the new total quantity
         if (newQuantity > product.quantity) {
             addItemForm.setError("quantity", { 
                 type: "manual", 
@@ -197,7 +195,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
 
     toast({ title: "تمت الإضافة", description: `تم إضافة ${data.quantity} من "${product.name}" إلى السلة.`, variant: "default" });
     addItemForm.reset({ productId: '', quantity: undefined });
-    setProductSearchValue(""); // Reset search value as well
+    setProductSearchValue(""); 
     addItemForm.clearErrors();
   };
   
@@ -227,7 +225,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
       id: finalSaleId,
       sale_timestamp: saleTimestamp,
       items: cartItems.map(cartItem => ({
-        id: crypto.randomUUID(), // Each SaleItem gets its own unique ID
+        id: crypto.randomUUID(), 
         sale_id: finalSaleId,
         product_id: cartItem.product_id,
         productNameSnapshot: cartItem.productNameSnapshot,
@@ -265,7 +263,6 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
           </DialogDescription>
         </DialogHeader>
 
-        {/* Form for Adding Items to Cart */}
         <Form {...addItemForm}>
           <form
             onSubmit={addItemForm.handleSubmit(handleAddItemToCart)}
@@ -334,7 +331,19 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                           step={quantityStepForAddItemForm}
                           {...field}
                           value={field.value === undefined || Number.isNaN(Number(field.value)) ? "" : field.value}
-                          onChange={(e) => field.onChange(e.target.value === "" ? undefined : e.target.valueAsNumber)}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                            const valueAsString = e.target.value;
+                            if (valueAsString === "" || valueAsString === "-") {
+                              field.onChange(undefined);
+                            } else {
+                              const valueAsNum = e.target.valueAsNumber;
+                              if (Number.isNaN(valueAsNum)) {
+                                field.onChange(valueAsString); 
+                              } else {
+                                field.onChange(valueAsNum);
+                              }
+                            }
+                          }}
                           disabled={!addItemForm.getValues('productId')}
                           className="min-h-[2.5rem]"
                         />
@@ -353,7 +362,6 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
         
         {cartItems.length > 0 && <Separator className="my-4" />}
 
-        {/* Cart Items Summary */}
         <ScrollArea className="flex-grow max-h-[300px] overflow-y-auto p-1">
           {cartItems.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">سلة البيع فارغة.</p>
@@ -384,21 +392,23 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
               الإجمالي الكلي: {grandTotal.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} د.ج
             </div>
             
-            <FormItem className="mt-4">
-              <FormLabel className="flex items-center">
+            {/* Replaced FormItem, FormLabel, FormControl, FormMessage with basic elements */}
+            <div className="mt-4 space-y-2">
+              <Label htmlFor="saleTimestamp" className="flex items-center">
                 <CalendarClock className="me-2 h-4 w-4 text-muted-foreground" />
                 تاريخ ووقت البيع
-              </FormLabel>
-              <FormControl>
-                <Input 
-                  type="datetime-local" 
-                  value={saleTimestampString}
-                  onChange={(e) => setSaleTimestampString(e.target.value)}
-                  className="text-right"
-                />
-              </FormControl>
-               { isNaN(new Date(saleTimestampString).getTime()) && <FormMessage className="text-destructive">التاريخ والوقت غير صالح.</FormMessage> }
-            </FormItem>
+              </Label>
+              <Input 
+                id="saleTimestamp"
+                type="datetime-local" 
+                value={saleTimestampString}
+                onChange={(e) => setSaleTimestampString(e.target.value)}
+                className="text-right"
+              />
+               { isNaN(new Date(saleTimestampString).getTime()) && 
+                 <p className="text-sm font-medium text-destructive">التاريخ والوقت غير صالح.</p> 
+               }
+            </div>
           </>
         )}
 
@@ -420,3 +430,4 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
     </Dialog>
   );
 }
+
