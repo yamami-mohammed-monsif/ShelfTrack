@@ -22,11 +22,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  // AlertDialogTrigger, // No longer needed here for the button in the row
 } from "@/components/ui/alert-dialog";
 import type { Product } from '@/lib/types';
 import { productTypeLabels, unitSuffix, isLowStock } from '@/lib/product-utils';
-import { format } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -73,7 +72,13 @@ export function ProductsTable({ products, onEditProduct, onDeleteProduct }: Prod
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products.sort((a, b) => b.timestamp - a.timestamp).map((product) => (
+            {products.sort((a, b) => {
+                const dateA = parseISO(a.updated_at);
+                const dateB = parseISO(b.updated_at);
+                if (!isValid(dateA)) return 1; // push invalid dates to the end
+                if (!isValid(dateB)) return -1;
+                return dateB.getTime() - dateA.getTime();
+              }).map((product) => (
               <TableRow key={product.id} className={cn(isLowStock(product) && "bg-destructive/10")}>
                 <TableCell className="font-medium rtl:text-right">
                   <Link href={`/products/${product.id}`} className="hover:underline text-primary">
@@ -98,13 +103,14 @@ export function ProductsTable({ products, onEditProduct, onDeleteProduct }: Prod
                   {product.quantity.toLocaleString()} {unitSuffix[product.type]}
                 </TableCell>
                 <TableCell className="text-left rtl:text-right">
-                  {format(new Date(product.timestamp), 'PPpp', { locale: arSA })}
+                  {product.updated_at && isValid(parseISO(product.updated_at)) 
+                    ? format(parseISO(product.updated_at), 'PPpp', { locale: arSA })
+                    : 'تاريخ غير متوفر'}
                 </TableCell>
                 <TableCell className="text-center space-x-2 rtl:space-x-reverse">
                   <Button variant="outline" size="icon" onClick={() => onEditProduct(product)} aria-label="تعديل المنتج">
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  {/* Removed AlertDialogTrigger wrapper. The button's onClick now directly controls the dialog state. */}
                   <Button variant="outline" size="icon" onClick={() => setProductToDelete(product)} aria-label="حذف المنتج" className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/50">
                     <Trash2 className="h-4 w-4" />
                   </Button>
