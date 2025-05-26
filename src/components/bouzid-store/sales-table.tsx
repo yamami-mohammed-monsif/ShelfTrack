@@ -15,12 +15,12 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible"; // Assuming you have this from ShadCN
+} from "@/components/ui/collapsible";
 import { Button } from '@/components/ui/button';
 import type { Sale } from '@/lib/types';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
-import { ChevronDown } from 'lucide-react'; // Changed from ChevronRight for better open/close indication
+import { ChevronDown } from 'lucide-react';
 import { unitSuffix } from '@/lib/product-utils';
 
 interface SalesTableProps {
@@ -61,8 +61,8 @@ export function SalesTable({
         </TableHeader>
         <TableBody>
           {sales.map((transaction) => (
-            <Collapsible key={transaction.id} asChild>
-              <>
+            <Collapsible key={transaction.id}> {/* Removed asChild to fix React.Fragment prop error */}
+              <React.Fragment>
                 <TableRow className="hover:bg-muted/30 data-[state=open]:bg-muted/40">
                   <TableCell className="font-medium rtl:text-right">
                     {typeof transaction.sale_timestamp === 'number' && !isNaN(transaction.sale_timestamp)
@@ -119,7 +119,7 @@ export function SalesTable({
                     </TableCell>
                   </TableRow>
                 </CollapsibleContent>
-              </>
+              </React.Fragment>
             </Collapsible>
           ))}
         </TableBody>
@@ -127,4 +127,3 @@ export function SalesTable({
     </div>
   );
 }
-
