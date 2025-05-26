@@ -39,7 +39,6 @@ import {
 } from '@/components/ui/form';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import type { AddToCartFormData, Product, CartItem, Sale } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { unitSuffix } from '@/lib/product-utils';
@@ -54,11 +53,11 @@ interface RecordSaleModalProps {
 }
 
 const createAddItemFormSchema = (allProducts: Product[], currentCartItems: CartItem[]) => z.object({
-  productId: z.string().min(1, { message: 'الرجاء اختيار منتج.' }),
+  productId: z.string().min(1), // Removed custom message
   quantity: z.coerce
     .number({
       required_error: "الكمية مطلوبة.",
-      invalid_type_error: "الكمية يجب أن تكون رقماً صالحاً."
+      // invalid_type_error removed
     })
     .positive({ message: 'الكمية يجب أن تكون أكبر من صفر.' }),
 }).superRefine((values, ctx) => {
@@ -71,7 +70,7 @@ const createAddItemFormSchema = (allProducts: Product[], currentCartItems: CartI
   }
 
   if (typeof values.quantity !== 'number' || Number.isNaN(values.quantity)) {
-    if (values.quantity !== undefined) { // Only add issue if it's not simply undefined (initial state)
+    if (values.quantity !== undefined) { 
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "الكمية يجب أن تكون رقماً صالحاً.", path: ['quantity'] });
     }
     return;
@@ -252,8 +251,8 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
       if (!open) onClose();
       setProductComboboxOpen(false); 
     }}>
-      <DialogContent className="sm:max-w-lg bg-card text-card-foreground flex flex-col max-h-[90vh] p-4 sm:p-6"> {/* Adjusted DialogContent padding */}
-        <DialogHeader className="mb-2"> {/* Added margin-bottom to header */}
+      <DialogContent className="sm:max-w-lg bg-card text-card-foreground flex flex-col max-h-[90vh] p-4 sm:p-6">
+        <DialogHeader className="mb-2">
           <DialogTitle className="text-center text-xl">تسجيل عملية بيع جديدة</DialogTitle>
           <DialogDescription className="text-center">
             أضف المنتجات إلى السلة ثم قم بإتمام عملية البيع.
@@ -263,14 +262,14 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
         <Form {...addItemForm}>
           <form
             onSubmit={addItemForm.handleSubmit(handleAddItemToCart)}
-            className="mb-4" // Added margin-bottom to form
+            className="mb-4 p-1" 
           >
-            <div className="flex items-start gap-2"> {/* For RTL: Product | Quantity | Add Button visually */}
+            <div className="flex items-start gap-2"> 
                <FormField 
                 control={addItemForm.control}
                 name="productId"
                 render={({ field }) => (
-                  <FormItem className="flex-1"> {/* Product Selector */}
+                  <FormItem className="flex-1">
                     <Popover open={productComboboxOpen} onOpenChange={setProductComboboxOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -317,7 +316,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                 control={addItemForm.control}
                 name="quantity"
                 render={({ field }) => (
-                  <FormItem className="w-24"> {/* Quantity Input */}
+                  <FormItem className="w-24"> 
                     <FormControl>
                       <Input
                         type="number"
@@ -346,21 +345,20 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                   </FormItem>
                 )}
               />
-              <Button type="submit" size="default" className="min-h-[2.5rem]" disabled={!addItemForm.formState.isValid || !addItemForm.getValues('productId')}>
+              <Button type="submit" size="default" className="min-h-[2.5rem]" disabled={!addItemForm.formState.isDirty || !addItemForm.formState.isValid || !addItemForm.getValues('productId')}>
                 <PlusCircle className="me-2 h-5 w-5" />
-                ADD.
+                إضافة
               </Button>
             </div>
           </form>
         </Form>
         
-        {/* Cart Display Area - "السلة CART السلة" */}
-        <ScrollArea className="flex-grow border rounded-md p-3 mb-4 bg-muted/20">
+        <ScrollArea className="flex-grow border rounded-md p-1 mb-4 bg-muted/20">
           {cartItems.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">السلة فارغة</p>
           ) : (
-            <div className="space-y-3">
-              <h3 className="text-md font-semibold flex items-center sticky top-0 bg-muted/20 py-1 -mt-3 -mx-3 px-3 border-b mb-3 z-10">
+            <div className="space-y-3 p-2"> {/* Added p-2 here for inner spacing */}
+              <h3 className="text-md font-semibold flex items-center sticky top-0 bg-muted/20 py-1 -mt-2 -mx-2 px-2 border-b mb-3 z-10">
                 <ListOrdered className="me-2 h-5 w-5 text-primary"/>السلة ({cartItems.length})
               </h3>
               {cartItems.map((item) => (
@@ -380,14 +378,12 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
           )}
         </ScrollArea>
 
-        {/* Total Price Display */}
         {cartItems.length > 0 && (
           <div className="text-lg font-bold p-3 border bg-muted/50 rounded-md text-center mb-4">
             {grandTotal.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} د.ج
           </div>
         )}
             
-        {/* Sale Timestamp Input */}
         <div className="mb-4">
           <Label htmlFor="saleTimestampRecordModal" className="flex items-center mb-1">
             <CalendarClock className="me-2 h-4 w-4 text-muted-foreground" />
@@ -398,7 +394,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
             type="datetime-local" 
             value={saleTimestampString}
             onChange={(e) => setSaleTimestampString(e.target.value)}
-            className="text-right w-full min-h-[2.5rem]" // Ensure full width
+            className="text-right w-full min-h-[2.5rem]"
           />
             { isNaN(new Date(saleTimestampString).getTime()) && cartItems.length > 0 &&
               <p className="text-sm font-medium text-destructive mt-1">التاريخ والوقت غير صالح.</p> 
@@ -407,7 +403,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
        
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>
-            Cancel
+            إلغاء
           </Button>
           <Button 
             type="button" 
@@ -416,10 +412,12 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
             disabled={cartItems.length === 0 || isNaN(new Date(saleTimestampString).getTime())}
           >
             <ShoppingCart className="ms-2 h-4 w-4" />
-            SELL
+            إتمام البيع
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
+    
