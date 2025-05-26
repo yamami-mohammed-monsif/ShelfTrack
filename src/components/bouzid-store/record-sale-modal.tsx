@@ -38,7 +38,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Label } from '@/components/ui/label';
-// ScrollArea removed as cart will use DialogContent's scroll
 import type { AddToCartFormData, Product, CartItem, Sale } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { unitSuffix } from '@/lib/product-utils';
@@ -265,6 +264,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
             onSubmit={addItemForm.handleSubmit(handleAddItemToCart)}
             className="mb-4 p-1"
           >
+            {/* Reordered for RTL: Product Selector, Quantity, Add Button */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-2">
                <FormField
                 control={addItemForm.control}
@@ -317,7 +317,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                 control={addItemForm.control}
                 name="quantity"
                 render={({ field }) => (
-                  <FormItem className="w-full sm:w-24">
+                  <FormItem className="w-full sm:w-32"> {/* Changed from sm:w-24 */}
                     <FormControl>
                       <Input
                         type="number"
@@ -339,7 +339,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                           }
                         }}
                         disabled={!addItemForm.getValues('productId')}
-                        className="min-h-[2.5rem]" // Removed text-center
+                        className="min-h-[2.5rem]"
                       />
                     </FormControl>
                     <FormMessage />
@@ -360,11 +360,11 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
         </Form>
 
         {cartItems.length > 0 && (
-          <div className="border rounded-md p-1 mb-4 bg-muted/20"> {/* Container for cart, keeps styling */}
-            <div className="space-y-3 p-2">
-              <h3 className="text-md font-semibold flex items-center sticky top-0 bg-muted/20 py-1 -mt-2 -mx-2 px-2 border-b mb-3 z-10">
-                <ListOrdered className="me-2 h-5 w-5 text-primary"/>السلة ({cartItems.length})
-              </h3>
+          <div className="border rounded-md mb-4 bg-muted/20">
+            <h3 className="text-md font-semibold flex items-center sticky top-0 bg-muted/20 py-2 px-3 border-b z-10">
+              <ListOrdered className="me-2 h-5 w-5 text-primary"/>السلة ({cartItems.length})
+            </h3>
+            <div className="space-y-2 p-2">
               {cartItems.map((item) => (
                 <div key={item.tempId} className="flex items-center justify-between p-2 border rounded-md bg-card hover:bg-card/90 transition-colors">
                   <div>
