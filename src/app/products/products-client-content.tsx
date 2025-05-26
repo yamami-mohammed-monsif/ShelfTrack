@@ -47,7 +47,7 @@ export default function ProductsClientContent() {
     if (filterFromQuery && Object.keys(filterLabels).includes(filterFromQuery) && filterFromQuery !== activeFilter) {
       setActiveFilter(filterFromQuery as ProductFilter);
     }
-  }, [searchParams, activeFilter]);
+  }, [searchParams]); // Removed activeFilter from dependency array
 
   const handleOpenEditModal = (product: Product) => {
     setProductToEdit(product);
@@ -164,8 +164,8 @@ export default function ProductsClientContent() {
                           {products.map((product) => (
                             <CommandItem
                               key={product.id}
-                              value={product.name} // value is used by CMDK for filtering/searching within the list
-                              onSelect={() => { // Use product.name for setting search term
+                              value={product.name} 
+                              onSelect={() => { 
                                 const newSearchTerm = product.name === searchTerm ? "" : product.name;
                                 setSearchTerm(newSearchTerm);
                                 setComboboxOpen(false);
@@ -221,6 +221,8 @@ export default function ProductsClientContent() {
     </div>
   );
 }
+    
+
     
 
     
