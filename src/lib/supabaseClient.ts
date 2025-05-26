@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 
 // Ensure your environment variables are correctly named and accessible.
@@ -20,7 +21,7 @@ export interface ProductRow {
   name: string; // text, NOT NULL
   type: 'powder' | 'liquid' | 'unit'; // text, NOT NULL, CHECK constraint
   wholesale_price: number; // float8, NOT NULL, CHECK (>=0)
-  retail_price: number; // float8, NOT NULL, CHECK (>=0)
+  retail_price: number; // float8, NOT NULL, CHECK (>=0), CHECK (retail_price >= wholesale_price)
   quantity: number; // float8, NOT NULL, CHECK (>=0)
   created_at: string; // timestamptz, NOT NULL, default now()
   updated_at: string; // timestamptz, NOT NULL, default now() (auto-updates via trigger)
@@ -30,16 +31,47 @@ export interface ProductRow {
 // Interface representing the structure of a row in your Supabase 'sales' table
 export interface SaleRow {
   id: string; // uuid, primary key
-  product_id: string; // uuid, foreign key to products.id, NOT NULL
-  product_name_snapshot: string; // text, NOT NULL
-  quantity_sold: number; // float8, NOT NULL, CHECK (>0)
-  wholesale_price_per_unit_snapshot: number; // float8, NOT NULL, CHECK (>=0)
-  retail_price_per_unit_snapshot: number; // float8, NOT NULL, CHECK (>=0)
-  total_sale_amount: number; // float8, NOT NULL, CHECK (>=0)
-  sale_timestamp: string; // timestamptz, NOT NULL (actual time of sale)
+  sale_timestamp: string; // timestamptz, NOT NULL
+  total_transaction_amount: number; // float8, NOT NULL, CHECK (>=0)
   created_at: string; // timestamptz, NOT NULL, default now()
   updated_at: string; // timestamptz, NOT NULL, default now() (auto-updates via trigger)
   // user_id?: string; // Optional: uuid, foreign key to auth.users if implementing RLS
 }
 
-// ... other types for notifications, backup_logs etc.
+// Interface representing the structure of a row in your Supabase 'sale_items' table
+export interface SaleItemRow {
+  id: string; // uuid, primary key
+  sale_id: string; // uuid, foreign key to sales.id, NOT NULL, ON DELETE CASCADE
+  product_id: string; // uuid, foreign key to products.id, NOT NULL, ON DELETE RESTRICT
+  product_name_snapshot: string; // text, NOT NULL
+  quantity_sold: number; // float8, NOT NULL, CHECK (>0)
+  wholesale_price_per_unit_snapshot: number; // float8, NOT NULL, CHECK (>=0)
+  retail_price_per_unit_snapshot: number; // float8, NOT NULL, CHECK (>=0)
+  item_total_amount: number; // float8, NOT NULL, CHECK (>=0)
+  created_at: string; // timestamptz, NOT NULL, default now()
+  updated_at: string; // timestamptz, NOT NULL, default now() (auto-updates via trigger)
+  // user_id?: string; // Optional: uuid, foreign key to auth.users if implementing RLS (might be redundant if sale has user_id)
+}
+
+
+// Interface representing the structure of a row in your Supabase 'notifications' table (Example)
+export interface NotificationRow {
+  id: string; // uuid, primary key
+  user_id?: string; // uuid, foreign key to auth.users, if notifications are user-specific
+  message: string; // text, NOT NULL
+  read: boolean; // boolean, NOT NULL, default false
+  href?: string; // text, optional link
+  product_id?: string; // uuid, foreign key to products.id, optional
+  created_at: string; // timestamptz, NOT NULL, default now()
+}
+
+// Interface representing the structure of a row in your Supabase 'backup_logs' table (Example)
+export interface BackupLogRow {
+  id: string; // uuid, primary key
+  user_id?: string; // uuid, foreign key to auth.users, if logs are user-specific
+  timestamp: string; // timestamptz, NOT NULL, when the backup was initiated by the client
+  period_start: string; // timestamptz, NOT NULL
+  period_end: string; // timestamptz, NOT NULL
+  file_name: string; // text, NOT NULL
+  created_at: string; // timestamptz, NOT NULL, default now()
+}
