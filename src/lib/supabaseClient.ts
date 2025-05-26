@@ -15,7 +15,6 @@ if (!supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Interface representing the structure of a row in your Supabase 'products' table
-// It's good practice to use snake_case for database column names.
 export interface ProductRow {
   id: string; // uuid, primary key
   name: string; // text, NOT NULL
@@ -28,31 +27,19 @@ export interface ProductRow {
   // user_id?: string; // Optional: uuid, foreign key to auth.users if implementing RLS
 }
 
-// Example of how you might define types for your tables,
-// which you can generate from your Supabase schema later.
-// export interface ProductRow {
-//   id: string; // or number, depending on your Supabase schema
-//   name: string;
-//   type: 'powder' | 'liquid' | 'unit';
-//   wholesale_price: number;
-//   retail_price: number;
-//   quantity: number;
-//   created_at: string; // Supabase typically uses ISO 8601 for timestamps
-//   updated_at: string;
-//   // user_id?: string; // If you add user authentication
-// }
-
-// export interface SaleRow {
-//   id: string; // or number
-//   product_id: string; // or number, foreign key to products table
-//   product_name_snapshot: string;
-//   quantity_sold: number;
-//   wholesale_price_per_unit_snapshot: number;
-//   retail_price_per_unit_snapshot: number;
-//   total_sale_amount: number;
-//   sale_timestamp: string; // ISO 8601
-//   created_at: string;
-//   // user_id?: string;
-// }
+// Interface representing the structure of a row in your Supabase 'sales' table
+export interface SaleRow {
+  id: string; // uuid, primary key
+  product_id: string; // uuid, foreign key to products.id, NOT NULL
+  product_name_snapshot: string; // text, NOT NULL
+  quantity_sold: number; // float8, NOT NULL, CHECK (>0)
+  wholesale_price_per_unit_snapshot: number; // float8, NOT NULL, CHECK (>=0)
+  retail_price_per_unit_snapshot: number; // float8, NOT NULL, CHECK (>=0)
+  total_sale_amount: number; // float8, NOT NULL, CHECK (>=0)
+  sale_timestamp: string; // timestamptz, NOT NULL (actual time of sale)
+  created_at: string; // timestamptz, NOT NULL, default now()
+  updated_at: string; // timestamptz, NOT NULL, default now() (auto-updates via trigger)
+  // user_id?: string; // Optional: uuid, foreign key to auth.users if implementing RLS
+}
 
 // ... other types for notifications, backup_logs etc.

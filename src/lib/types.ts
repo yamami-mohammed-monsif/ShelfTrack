@@ -21,14 +21,16 @@ export interface ProductFormData {
 }
 
 export interface Sale {
-  id:string;
-  productId: string;
+  id: string; // uuid from Supabase
+  product_id: string; // Foreign key to Product
   productNameSnapshot: string; // Snapshot of product name at time of sale
   quantitySold: number;
   wholesalePricePerUnitSnapshot: number; // Snapshot of product wholesale price at sale time
   retailPricePerUnitSnapshot: number; // Snapshot of product retail price at sale time
   totalSaleAmount: number; // Calculated based on retailPricePerUnitSnapshot * quantitySold
-  saleTimestamp: number; // Unix timestamp (milliseconds) - Will likely change to string for Supabase
+  saleTimestamp: string; // ISO 8601 string for the actual sale time
+  created_at: string; // ISO 8601 string from Supabase
+  updated_at: string; // ISO 8601 string from Supabase
 }
 
 export interface SaleFormData {
