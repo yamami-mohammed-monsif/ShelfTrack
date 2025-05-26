@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
 import { Plus, ShoppingCart } from 'lucide-react';
 
-export default function BouzidStorePage() {
+export default function HomePage() {
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
   const [isRecordSaleModalOpen, setIsRecordSaleModalOpen] = useState(false);
   

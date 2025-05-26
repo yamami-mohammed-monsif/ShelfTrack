@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Sale, Product, EditSaleFormData } from '@/lib/types';
 
-const SALES_STORAGE_KEY = 'bouzid_store_sales';
+const SALES_STORAGE_KEY = 'shelftrack_sales';
 
 interface SalesState {
   sales: Sale[];

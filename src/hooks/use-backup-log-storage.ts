@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { BackupLogEntry } from '@/lib/types';
 
-const BACKUP_LOG_STORAGE_KEY = 'bouzid_store_backup_log';
+const BACKUP_LOG_STORAGE_KEY = 'shelftrack_backup_log';
 
 interface BackupLogState {
   logs: BackupLogEntry[];

@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Notification } from '@/lib/types';
 
-const NOTIFICATIONS_STORAGE_KEY = 'bouzid_store_notifications';
+const NOTIFICATIONS_STORAGE_KEY = 'shelftrack_notifications';
 const MAX_NOTIFICATIONS = 50; // Keep a reasonable number of notifications
 const ONE_WEEK_IN_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -86,7 +86,7 @@ function notificationsReducer(currentNotifications: Notification[], action: Noti
   }
 }
 
-function dispatchNotification(action: NotificationAction) { // Renamed dispatch to dispatchNotification
+function dispatchNotification(action: NotificationAction) { 
   memoryState = {
       ...memoryState,
       notifications: notificationsReducer(memoryState.notifications, action),
