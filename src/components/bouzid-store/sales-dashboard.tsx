@@ -7,16 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { SalesTable } from '@/components/bouzid-store/sales-table';
 import type { Product } from '@/lib/types';
-import { DollarSign, TrendingUp, Package, AlertTriangle, List, ArrowLeft, ShoppingCart } from 'lucide-react';
+import { DollarSign, TrendingUp, Package, AlertTriangle, List, ArrowLeft } from 'lucide-react';
 import { useSalesStorage } from '@/hooks/use-sales-storage';
 import { isLowStock } from '@/lib/product-utils';
 import {
   startOfDay, endOfDay,
-  startOfWeek, endOfWeek,
-  isWithinInterval,
   isSameDay,
 } from 'date-fns';
-// import { arSA } from 'date-fns/locale'; // arSA not strictly needed for interval checks unless week starts on different day
 import { cn } from '@/lib/utils';
 
 interface SalesDashboardProps {
@@ -48,7 +45,7 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
     const todayStart = startOfDay(todayRefDate); 
     const todayEnd = endOfDay(todayRefDate);     
     
-    const salesToday = sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: todayStart, end: todayEnd }));
+    const salesToday = sales.filter(s => isSameDay(new Date(s.saleTimestamp), todayRefDate));
 
     const todaySalesValue = salesToday.reduce((sum, s) => sum + s.totalSaleAmount, 0);
     const todayProfit = salesToday.reduce((sum, s) => {
@@ -67,7 +64,7 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
 
   const recentSales = useMemo(() => {
     if (!isSalesLoaded) return [];
-    return sales.sort((a, b) => b.saleTimestamp - a.timestamp).slice(0, 5);
+    return sales.sort((a, b) => b.saleTimestamp - a.saleTimestamp).slice(0, 5);
   }, [sales, isSalesLoaded]);
 
 
@@ -80,7 +77,7 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
   }
 
   return (
-    <div className="py-8 space-y-8 container mx-auto px-4"> 
+    <div className="space-y-8 pt-4 pb-8"> 
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2"> 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
