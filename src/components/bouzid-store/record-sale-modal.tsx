@@ -267,12 +267,12 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
             onSubmit={addItemForm.handleSubmit(handleAddItemToCart)}
             className="mb-4 p-1" 
           >
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-2"> {/* Product, Quantity, Add Button container */}
                <FormField 
                 control={addItemForm.control}
                 name="productId"
                 render={({ field }) => (
-                  <FormItem className="w-full"> {/* Changed from flex-1 to w-full */}
+                  <FormItem className="w-full">
                     <Popover open={productComboboxOpen} onOpenChange={setProductComboboxOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -323,7 +323,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                     <FormControl>
                       <Input
                         type="number"
-                        placeholder="0"
+                        placeholder="الكمية"
                         step={quantityStepForAddItemForm}
                         {...field}
                         value={field.value === undefined || Number.isNaN(Number(field.value)) ? "" : field.value}
@@ -361,7 +361,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
           </form>
         </Form>
         
-        <ScrollArea className="flex-grow border rounded-md p-1 mb-4 bg-muted/20"> {/* Removed max-h-[300px] */}
+        <ScrollArea className="flex-grow border rounded-md p-1 mb-4 bg-muted/20">
           {cartItems.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">السلة فارغة</p>
           ) : (
@@ -392,7 +392,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
           </div>
         )}
             
-        <div className="mb-4 p-1"> {/* Added p-1 for consistency */}
+        <div className="mb-4 p-1">
            <Label htmlFor="saleTimestampRecordModal" className="flex items-center mb-1">
             <CalendarClock className="me-2 h-4 w-4 text-muted-foreground" />
             تاريخ ووقت البيع
@@ -409,7 +409,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
             }
         </div>
        
-        <DialogFooter className="gap-2 sm:gap-0 p-1 pt-2"> {/* Added p-1 pt-2 */}
+        <DialogFooter className="gap-2 sm:gap-0 p-1 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
             إلغاء
           </Button>
