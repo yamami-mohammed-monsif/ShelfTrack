@@ -2,9 +2,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { Product, ProductFormData } from '@/lib/types';
+import type { Product, ProductFormData, ProductType } from '@/lib/types';
 import { useNotificationsStorage, NotificationActionTypes } from './use-notifications-storage';
-import { isLowStock, wasLowStock, unitSuffix } from '@/lib/product-utils';
+import { isLowStock, wasLowStock, unitSuffix, productTypeLabels } from '@/lib/product-utils';
 
 const PRODUCTS_STORAGE_KEY = 'shelftrack_products';
 
@@ -13,6 +13,7 @@ interface ProductsState {
   isLoaded: boolean;
 }
 
+// --- Module-level shared state and logic ---
 let memoryState: ProductsState = {
   products: [],
   isLoaded: false,
@@ -42,19 +43,30 @@ type ProductAction =
 function productsReducer(
   currentProducts: Product[],
   action: ProductAction,
-  addNotificationFn?: (message: string, productId?: string, href?: string) => void,
+  addNotificationFn?: (product: Product) => void,
   deleteNotificationsByProductIdFn?: (productId: string) => void
 ): Product[] {
   switch (action.type) {
     case ProductActionTypes.SET_LOADED:
-      return action.payload.sort((a, b) => b.timestamp - a.timestamp);
+      return action.payload
+        .map(p => ({ // Sanitize loaded products
+          ...p,
+          name: p.name || 'Unknown Product',
+          type: p.type || 'unit', // Default to 'unit' if type is missing
+          quantity: typeof p.quantity === 'number' ? p.quantity : 0,
+          wholesalePrice: typeof p.wholesalePrice === 'number' ? p.wholesalePrice : 0,
+          retailPrice: typeof p.retailPrice === 'number' ? p.retailPrice : 0,
+          created_at: p.created_at || new Date().toISOString(),
+          updated_at: p.updated_at || new Date().toISOString(),
+        }))
+        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
     case ProductActionTypes.ADD: {
       const { newProduct } = action.payload;
-      if (isLowStock(newProduct) && addNotificationFn) {
-        const message = `"${newProduct.name}" أوشك على النفاد. الكمية المتبقية: ${newProduct.quantity.toLocaleString()} ${unitSuffix[newProduct.type]}.`;
-        addNotificationFn(message, newProduct.id, `/products/${newProduct.id}`);
+      const productsWithNew = [newProduct, ...currentProducts];
+      if (addNotificationFn && isLowStock(newProduct)) {
+        addNotificationFn(newProduct);
       }
-      return [newProduct, ...currentProducts].sort((a, b) => b.timestamp - a.timestamp);
+      return productsWithNew.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
     }
     case ProductActionTypes.EDIT: {
       const productBeforeUpdate = currentProducts.find(p => p.id === action.payload.productId);
@@ -65,7 +77,7 @@ function productsReducer(
           productAfterUpdate = {
             ...product,
             ...action.payload.updatedData,
-            timestamp: Date.now(),
+            updated_at: new Date().toISOString(),
           };
           return productAfterUpdate;
         }
@@ -76,11 +88,10 @@ function productsReducer(
         const wasPreviouslyLow = wasLowStock(productBeforeUpdate.type, productBeforeUpdate.quantity);
         const isNowLow = isLowStock(productAfterUpdate);
         if (isNowLow && !wasPreviouslyLow) {
-          const message = `"${productAfterUpdate.name}" أوشك على النفاد. الكمية المتبقية: ${productAfterUpdate.quantity.toLocaleString()} ${unitSuffix[productAfterUpdate.type]}.`;
-          addNotificationFn(message, productAfterUpdate.id, `/products/${productAfterUpdate.id}`);
+          addNotificationFn(productAfterUpdate);
         }
       }
-      return newProducts.sort((a, b) => b.timestamp - a.timestamp);
+      return newProducts.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
     }
     case ProductActionTypes.DECREASE_QUANTITY: {
       const productBeforeUpdate = currentProducts.find(p => p.id === action.payload.productId);
@@ -88,10 +99,12 @@ function productsReducer(
 
       const newProducts = currentProducts.map((product) => {
         if (product.id === action.payload.productId) {
+          const currentQuantity = typeof product.quantity === 'number' ? product.quantity : 0;
+          const decreasedQuantity = Math.max(0, currentQuantity - action.payload.quantityToDecrease);
           productAfterUpdate = {
             ...product,
-            quantity: Math.max(0, product.quantity - action.payload.quantityToDecrease),
-            timestamp: Date.now(),
+            quantity: decreasedQuantity,
+            updated_at: new Date().toISOString(),
           };
           return productAfterUpdate;
         }
@@ -99,27 +112,33 @@ function productsReducer(
       });
       
       if (productAfterUpdate && productBeforeUpdate && addNotificationFn) {
+        // Ensure productAfterUpdate has valid type for wasLowStock/isLowStock comparison
+        const validProductAfterUpdate = {
+            ...productAfterUpdate,
+            type: productAfterUpdate.type || productBeforeUpdate.type || 'unit' // Fallback if type is somehow missing
+        };
+
         const wasPreviouslyLow = wasLowStock(productBeforeUpdate.type, productBeforeUpdate.quantity);
-        const isNowLow = isLowStock(productAfterUpdate);
+        const isNowLow = isLowStock(validProductAfterUpdate); 
+
         if (isNowLow && !wasPreviouslyLow) {
-           const message = `"${productAfterUpdate.name}" أوشك على النفاد. الكمية المتبقية: ${productAfterUpdate.quantity.toLocaleString()} ${unitSuffix[productAfterUpdate.type]}.`;
-           addNotificationFn(message, productAfterUpdate.id, `/products/${productAfterUpdate.id}`);
+           addNotificationFn(validProductAfterUpdate);
         }
       }
-      return newProducts.sort((a, b) => b.timestamp - a.timestamp);
+      return newProducts.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
     }
      case ProductActionTypes.INCREASE_QUANTITY: {
       const newProducts = currentProducts.map((product) => {
         if (product.id === action.payload.productId) {
           return {
             ...product,
-            quantity: product.quantity + action.payload.quantityToIncrease,
-            timestamp: Date.now(),
+            quantity: (typeof product.quantity === 'number' ? product.quantity : 0) + action.payload.quantityToIncrease,
+            updated_at: new Date().toISOString(),
           };
         }
         return product;
       });
-      return newProducts.sort((a, b) => b.timestamp - a.timestamp);
+      return newProducts.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
     }
     case ProductActionTypes.DELETE:
       if (deleteNotificationsByProductIdFn) {
@@ -133,7 +152,11 @@ function productsReducer(
   }
 }
 
-function dispatch(action: ProductAction, addNotificationFn?: (message: string, productId?: string, href?: string) => void, deleteNotificationsByProductIdFn?: (productId: string) => void) {
+function dispatch(
+  action: ProductAction,
+  addNotificationFn?: (product: Product) => void,
+  deleteNotificationsByProductIdFn?: (productId: string) => void
+) {
   memoryState = {
     ...memoryState,
     products: productsReducer(memoryState.products, action, addNotificationFn, deleteNotificationsByProductIdFn),
@@ -158,18 +181,26 @@ function dispatch(action: ProductAction, addNotificationFn?: (message: string, p
     listeners.forEach((listener) => listener(memoryState));
   });
 }
+// --- End of Module-level shared state and logic ---
+
 
 export function useProductsStorage() {
   const [state, setState] = useState<ProductsState>(memoryState);
-  const { addNotification, deleteNotificationsByProductId, dispatchNotification } = useNotificationsStorage();
+  const { addNotification, deleteNotificationsByProductId } = useNotificationsStorage();
+
 
   const createLowStockNotification = useCallback((product: Product) => {
+    // Guard against missing essential data before creating notification message
+    if (typeof product.quantity !== 'number' || !product.type || !(product.type in unitSuffix) || !product.name) {
+      console.error("Skipping low stock notification due to incomplete product data:", product);
+      return;
+    }
     const message = `"${product.name}" أوشك على النفاد. الكمية المتبقية: ${product.quantity.toLocaleString()} ${unitSuffix[product.type]}.`;
     addNotification(message, product.id, `/products/${product.id}`);
   }, [addNotification]);
 
   useEffect(() => {
-    if (!memoryState.isLoaded) {
+    if (!memoryState.isLoaded) { 
       let initialProducts: Product[] = [];
       try {
         const storedProducts = localStorage.getItem(PRODUCTS_STORAGE_KEY);
@@ -178,24 +209,25 @@ export function useProductsStorage() {
         }
       } catch (error) {
         console.error("Failed to load products from localStorage:", error);
+        initialProducts = []; // Ensure it's an array on error
       }
-      dispatch({ type: ProductActionTypes.SET_LOADED, payload: initialProducts }, addNotification, deleteNotificationsByProductId);
+      dispatch({ type: ProductActionTypes.SET_LOADED, payload: initialProducts }, createLowStockNotification, deleteNotificationsByProductId);
     }
     
     const listener = (newState: ProductsState) => setState(newState);
     listeners.push(listener);
-
+    
     if (memoryState.isLoaded && !state.isLoaded) {
         setState(memoryState);
     }
 
-    return () => {
+    return () => { 
       const index = listeners.indexOf(listener);
       if (index > -1) {
         listeners.splice(index, 1);
       }
     };
-  }, [state.isLoaded, addNotification, deleteNotificationsByProductId]); 
+  }, [state.isLoaded, createLowStockNotification, deleteNotificationsByProductId]); 
 
   const addProduct = useCallback((productData: ProductFormData): Product | null => {
     const existingProduct = memoryState.products.find(
@@ -205,10 +237,12 @@ export function useProductsStorage() {
     if (existingProduct) {
       return null; 
     }
+    const nowISO = new Date().toISOString();
     const newProduct: Product = {
       ...productData,
       id: crypto.randomUUID(),
-      timestamp: Date.now(),
+      created_at: nowISO,
+      updated_at: nowISO,
     };
     dispatch({ type: ProductActionTypes.ADD, payload: { newProduct } }, createLowStockNotification);
     return newProduct;
@@ -234,13 +268,12 @@ export function useProductsStorage() {
   }, [deleteNotificationsByProductId]);
   
   const getProductById = useCallback((productId: string): Product | undefined => {
-    return state.products.find(p => p.id === productId);
+    // Ensure the products from state are also sanitized, though SET_LOADED should handle initial load
+    return state.products.find(p => p.id === productId && typeof p.quantity === 'number');
   }, [state.products]);
 
   const clearAllProducts = useCallback(() => {
     dispatch({ type: ProductActionTypes.CLEAR_ALL });
-    // Optionally, also clear all product-related notifications if desired
-    // This depends on how you want reset to behave regarding notifications
   }, []);
   
   const productsDispatch = useCallback((action: ProductAction) => {
@@ -260,3 +293,5 @@ export function useProductsStorage() {
     isLoaded: state.isLoaded 
   };
 }
+
+    
