@@ -3,7 +3,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-// import { AppHeader } from '@/components/bouzid-store/app-header'; // No longer needed here
 import { ProductsTable } from '@/components/bouzid-store/products-table';
 import { EditProductModal } from '@/components/bouzid-store/edit-product-modal';
 import { useProductsStorage } from '@/hooks/use-products-storage';
@@ -37,6 +36,11 @@ export default function ProductsClientContent() {
   const [activeFilter, setActiveFilter] = useState<ProductFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [comboboxOpen, setComboboxOpen] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   useEffect(() => {
     const filterFromQuery = searchParams.get('filter');
@@ -111,7 +115,7 @@ export default function ProductsClientContent() {
     return intermediateProducts;
   }, [products, activeFilter, searchTerm]);
 
-  if (!isLoaded) {
+  if (!hasMounted || !isLoaded) {
     return (
       <div className="flex flex-col min-h-screen bg-background">
         <main className="flex-grow flex items-center justify-center">
