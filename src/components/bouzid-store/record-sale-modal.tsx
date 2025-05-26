@@ -118,7 +118,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
     // @ts-ignore
     addItemForm.resolver = zodResolver(createAddItemFormSchema(productsRef.current, cartItemsRef.current));
     addItemForm.trigger();
-  }, [products, cartItems, addItemForm]);
+  }, [products, cartItems]);
 
 
   useEffect(() => {
@@ -250,7 +250,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       if (!open) onClose();
-      setProductComboboxOpen(false);
+      setProductComboboxOpen(false); // Ensure combobox popover closes when dialog closes
     }}>
       <DialogContent className="sm:max-w-lg bg-card text-card-foreground flex flex-col max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader className="mb-2 text-center">
@@ -350,7 +350,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                 type="submit"
                 size="default"
                 className="min-h-[2.5rem] w-full sm:w-auto"
-                disabled={!addItemForm.formState.isDirty || !addItemForm.formState.isValid || !addItemForm.getValues('productId')}
+                disabled={!addItemForm.formState.isValid || !addItemForm.getValues('productId')}
                >
                 <PlusCircle className="me-2 h-5 w-5" />
                 إضافة
@@ -359,7 +359,6 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
           </form>
         </Form>
 
-        {/* Cart Items List - Removed flex-grow */}
         <ScrollArea className="border rounded-md p-1 mb-4 bg-muted/20">
           {cartItems.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">السلة فارغة</p>
