@@ -1,10 +1,10 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSalesStorage } from '@/hooks/use-sales-storage';
 import { useProductsStorage } from '@/hooks/use-products-storage';
-import type { Sale, Product } from '@/lib/types';
+import type { Sale, Product, SaleItem } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, TooltipProps } from 'recharts';
@@ -28,7 +28,7 @@ import {
   startOfMonth,
   endOfMonth,
   startOfYear,
-  endOfYear, // Added endOfYear
+  endOfYear,
   startOfHour,
   endOfHour,
   eachHourOfInterval,
@@ -46,7 +46,7 @@ type SalesAnalyticsTimeframe = 'daily' | 'weekly' | 'monthly' | 'last3months' | 
 
 interface SalesAnalyticsChartDataPoint {
   dateLabel: string;
-  totalSales: number;
+  totalSales: number; // Represents total transaction amount for the period
   tooltipLabel?: string;
 }
 
@@ -84,9 +84,15 @@ const CustomSalesAnalyticsTooltip = ({ active, payload, label }: TooltipProps<nu
 
 
 export default function SalesAnalyticsPage() {
-  const { sales, isSalesLoaded } = useSalesStorage();
+  const { sales: salesTransactions, isSalesLoaded } = useSalesStorage(); // sales is now array of Sale transactions
   const { products, isLoaded: isProductsLoaded } = useProductsStorage();
   const [activeTimeframe, setActiveTimeframe] = useState<SalesAnalyticsTimeframe>('monthly');
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
 
   const salesTimeInterval = useMemo(() => {
     const now = new Date();
@@ -104,19 +110,19 @@ export default function SalesAnalyticsPage() {
         break;
       case 'monthly':
         start = startOfMonth(now);
-        end = min([endOfDay(now), endOfMonth(now)]); // Data up to end of today, or end of month if earlier
+        end = min([endOfDay(now), endOfMonth(now)]);
         break;
       case 'last3months':
-        start = startOfDay(subDays(now, 89)); // approx 90 days
+        start = startOfDay(subDays(now, 89));
         end = endOfDay(now);
         break;
       case 'last6months':
-        start = startOfDay(subDays(now, 179)); // approx 180 days
+        start = startOfDay(subDays(now, 179));
         end = endOfDay(now);
         break;
       case 'yearly':
         start = startOfYear(now);
-        end = min([endOfDay(now), endOfYear(now)]); // Data up to end of today, or end of year if earlier
+        end = min([endOfDay(now), endOfYear(now)]);
         break;
       default:
         start = now;
@@ -126,12 +132,12 @@ export default function SalesAnalyticsPage() {
   }, [activeTimeframe]);
 
   const chartData = useMemo(() => {
-    if (!isSalesLoaded || sales.length === 0) return [];
+    if (!isSalesLoaded || salesTransactions.length === 0) return [];
 
     let aggregatedData: SalesAnalyticsChartDataPoint[] = [];
     const { start: intervalStart, end: intervalEnd } = salesTimeInterval;
 
-    const relevantSales = sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: intervalStart, end: intervalEnd }));
+    const relevantTransactions = salesTransactions.filter(t => isWithinInterval(new Date(t.sale_timestamp), { start: intervalStart, end: intervalEnd }));
 
     switch (activeTimeframe) {
       case 'daily': {
@@ -139,11 +145,11 @@ export default function SalesAnalyticsPage() {
         aggregatedData = hoursToday.map(hour => {
           const hourStart = startOfHour(hour);
           const hourEnd = endOfHour(hour);
-          const hourSales = relevantSales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: hourStart, end: hourEnd }));
+          const hourTransactions = relevantTransactions.filter(t => isWithinInterval(new Date(t.sale_timestamp), { start: hourStart, end: hourEnd }));
           return {
             dateLabel: format(hour, 'HH:00', { locale: arSA }),
             tooltipLabel: `الساعة: ${format(hour, 'HH:00', { locale: arSA })} - ${format(hourEnd, 'HH:59', { locale: arSA })}`,
-            totalSales: hourSales.reduce((sum, s) => sum + s.totalSaleAmount, 0),
+            totalSales: hourTransactions.reduce((sum, t) => sum + t.total_transaction_amount, 0),
           };
         });
         break;
@@ -153,11 +159,11 @@ export default function SalesAnalyticsPage() {
         aggregatedData = days.map(day => {
           const dayStart = startOfDay(day);
           const dayEnd = endOfDay(day);
-          const daySales = relevantSales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: dayStart, end: dayEnd }));
+          const dayTransactions = relevantTransactions.filter(t => isWithinInterval(new Date(t.sale_timestamp), { start: dayStart, end: dayEnd }));
           return {
             dateLabel: format(day, 'EEE d', { locale: arSA }),
             tooltipLabel: format(day, 'MMMM d, yyyy', { locale: arSA }),
-            totalSales: daySales.reduce((sum, s) => sum + s.totalSaleAmount, 0),
+            totalSales: dayTransactions.reduce((sum, t) => sum + t.total_transaction_amount, 0),
           };
         });
         break;
@@ -167,11 +173,11 @@ export default function SalesAnalyticsPage() {
         aggregatedData = daysInMonth.map(day => {
           const dayStart = startOfDay(day);
           const dayEnd = endOfDay(day);
-          const daySales = relevantSales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: dayStart, end: dayEnd }));
+          const dayTransactions = relevantTransactions.filter(t => isWithinInterval(new Date(t.sale_timestamp), { start: dayStart, end: dayEnd }));
           return {
             dateLabel: format(day, 'd', { locale: arSA }),
             tooltipLabel: format(day, 'MMMM d, yyyy', { locale: arSA }),
-            totalSales: daySales.reduce((sum, s) => sum + s.totalSaleAmount, 0),
+            totalSales: dayTransactions.reduce((sum, t) => sum + t.total_transaction_amount, 0),
           };
         });
         break;
@@ -182,12 +188,12 @@ export default function SalesAnalyticsPage() {
         const lastWeekEnd = endOfWeek(intervalEnd, { locale: arSA });
         const weeks = eachWeekOfInterval({ start: firstWeekStart, end: lastWeekEnd }, { weekStartsOn: arSA.options?.weekStartsOn });
         aggregatedData = weeks.map(weekStart => {
-          const weekEnd = endOfWeek(weekStart, { locale: arSA });
-          const weekSales = relevantSales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: weekStart, end: weekEnd }));
+          const weekEndVal = endOfWeek(weekStart, { locale: arSA });
+          const weekTransactions = relevantTransactions.filter(t => isWithinInterval(new Date(t.sale_timestamp), { start: weekStart, end: weekEndVal }));
           return {
             dateLabel: format(weekStart, 'MMM d', { locale: arSA }),
-            tooltipLabel: `أسبوع ${format(weekStart, 'MMM d', { locale: arSA })} - ${format(weekEnd, 'MMM d, yyyy', { locale: arSA })}`,
-            totalSales: weekSales.reduce((sum, s) => sum + s.totalSaleAmount, 0),
+            tooltipLabel: `أسبوع ${format(weekStart, 'MMM d', { locale: arSA })} - ${format(weekEndVal, 'MMM d, yyyy', { locale: arSA })}`,
+            totalSales: weekTransactions.reduce((sum, t) => sum + t.total_transaction_amount, 0),
           };
         });
         break;
@@ -197,24 +203,23 @@ export default function SalesAnalyticsPage() {
         aggregatedData = monthsInYear.map(monthStart => {
           const monthEndPeriod = endOfMonth(monthStart);
           const actualMonthEnd = min([intervalEnd, monthEndPeriod]);
-          const monthSales = relevantSales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: monthStart, end: actualMonthEnd }));
+          const monthTransactions = relevantTransactions.filter(t => isWithinInterval(new Date(t.sale_timestamp), { start: monthStart, end: actualMonthEnd }));
           return {
             dateLabel: format(monthStart, 'MMM', { locale: arSA }),
             tooltipLabel: format(monthStart, 'MMMM yyyy', { locale: arSA }),
-            totalSales: monthSales.reduce((sum, s) => sum + s.totalSaleAmount, 0),
+            totalSales: monthTransactions.reduce((sum, t) => sum + t.total_transaction_amount, 0),
           };
         });
         break;
       }
     }
     return aggregatedData;
-  }, [sales, isSalesLoaded, activeTimeframe, salesTimeInterval]);
+  }, [salesTransactions, isSalesLoaded, activeTimeframe, salesTimeInterval]);
 
   const topPerformingProductsData = useMemo((): TopPerformingProduct[] => {
-    if (!isSalesLoaded || !isProductsLoaded || sales.length === 0 || products.length === 0) return [];
+    if (!isSalesLoaded || !isProductsLoaded || salesTransactions.length === 0 || products.length === 0) return [];
 
     const { start: intervalStart, end: intervalEnd } = salesTimeInterval;
-    const relevantSales = sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: intervalStart, end: intervalEnd }));
 
     const productPerformance: Record<string, {
       productId: string;
@@ -224,20 +229,24 @@ export default function SalesAnalyticsPage() {
       totalProfit: number;
     }> = {};
 
-    relevantSales.forEach(sale => {
-      if (!productPerformance[sale.productId]) {
-        const productDetails = products.find(p => p.id === sale.productId);
-        productPerformance[sale.productId] = {
-          productId: sale.productId,
-          productName: productDetails?.name || sale.productNameSnapshot,
-          productType: productDetails?.type,
-          totalQuantitySold: 0,
-          totalProfit: 0,
-        };
+    salesTransactions.forEach(transaction => {
+      if (isWithinInterval(new Date(transaction.sale_timestamp), { start: intervalStart, end: intervalEnd })) {
+        (transaction.items || []).forEach(item => {
+          if (!productPerformance[item.product_id]) {
+            const productDetails = products.find(p => p.id === item.product_id);
+            productPerformance[item.product_id] = {
+              productId: item.product_id,
+              productName: productDetails?.name || item.productNameSnapshot,
+              productType: productDetails?.type,
+              totalQuantitySold: 0,
+              totalProfit: 0,
+            };
+          }
+          productPerformance[item.product_id].totalQuantitySold += item.quantitySold;
+          const profitPerSaleItem = (item.retailPricePerUnitSnapshot - (item.wholesalePricePerUnitSnapshot || 0)) * item.quantitySold;
+          productPerformance[item.product_id].totalProfit += isNaN(profitPerSaleItem) ? 0 : profitPerSaleItem;
+        });
       }
-      productPerformance[sale.productId].totalQuantitySold += sale.quantitySold;
-      const profitPerSale = (sale.retailPricePerUnitSnapshot - (sale.wholesalePricePerUnitSnapshot || 0)) * sale.quantitySold;
-      productPerformance[sale.productId].totalProfit += isNaN(profitPerSale) ? 0 : profitPerSale;
     });
 
     return Object.values(productPerformance)
@@ -248,7 +257,7 @@ export default function SalesAnalyticsPage() {
       .sort((a, b) => b.totalProfit - a.totalProfit)
       .slice(0, 10);
 
-  }, [sales, products, activeTimeframe, isSalesLoaded, isProductsLoaded, salesTimeInterval]);
+  }, [salesTransactions, products, activeTimeframe, isSalesLoaded, isProductsLoaded, salesTimeInterval]);
 
 
   const chartConfig = {
@@ -258,7 +267,7 @@ export default function SalesAnalyticsPage() {
     },
   };
 
-  if (!isSalesLoaded || !isProductsLoaded) {
+  if (!hasMounted || !isSalesLoaded || !isProductsLoaded) {
     return (
       <div className="flex flex-col min-h-screen bg-background">
         <main className="flex-grow flex items-center justify-center">
@@ -357,7 +366,7 @@ export default function SalesAnalyticsPage() {
               <div className="text-center py-10 text-muted-foreground">
                 <CalendarDays className="mx-auto h-12 w-12 mb-4" />
                 <p>لا توجد بيانات مبيعات لعرضها لهذه الفترة الزمنية.</p>
-                 {activeTimeframe === 'daily' && sales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: startOfDay(new Date()), end: endOfDay(new Date()) })).length === 0 && <p>لا توجد مبيعات مسجلة لهذا اليوم حتى الآن.</p>}
+                 {activeTimeframe === 'daily' && salesTransactions.filter(t => isWithinInterval(new Date(t.sale_timestamp), { start: startOfDay(new Date()), end: endOfDay(new Date()) })).length === 0 && <p>لا توجد مبيعات مسجلة لهذا اليوم حتى الآن.</p>}
               </div>
             )}
           </CardContent>
@@ -416,5 +425,3 @@ export default function SalesAnalyticsPage() {
     </div>
   );
 }
-
-    

@@ -4,12 +4,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { EditProductModal } from '@/components/bouzid-store/edit-product-modal';
-import { EditSaleModal } from '@/components/bouzid-store/edit-sale-modal'; // New Import
+// EditSaleModal and related logic removed for now
+// import { EditSaleModal } from '@/components/bouzid-store/edit-sale-modal';
 import { SalesTable } from '@/components/bouzid-store/sales-table';
 import { useProductsStorage } from '@/hooks/use-products-storage';
 import { useSalesStorage } from '@/hooks/use-sales-storage';
 import { useToast } from '@/hooks/use-toast';
-import type { Product, ProductFormData, Sale, EditSaleFormData } from '@/lib/types'; // Updated types
+import type { Product, ProductFormData, Sale, SaleItem } from '@/lib/types'; // EditSaleFormData removed
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
@@ -34,7 +35,7 @@ import { cn } from '@/lib/utils';
 
 const CustomSalesTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
   if (active && payload && payload.length) {
-    const data = payload[0].payload as any; 
+    const data = payload[0].payload as any;
     return (
       <div className="rounded-lg border bg-background p-2 shadow-sm">
         <div className="grid grid-cols-1 gap-1 text-right">
@@ -58,32 +59,32 @@ export default function ProductDetailPage() {
   const { toast } = useToast();
   const productId = typeof params.productId === 'string' ? params.productId : '';
 
-  const { 
-    getProductById, 
-    editProduct, 
+  const {
+    getProductById,
+    editProduct,
     deleteProduct,
-    increaseProductQuantity, // For sale edits/deletes
-    decreaseProductQuantity, // For sale edits
+    // increaseProductQuantity, // Will be needed if sale edit/delete is re-added
+    // decreaseProductQuantity,
     isLoaded: productsLoaded,
   } = useProductsStorage();
-  const { 
-    sales, 
-    editSale, // For editing sales
-    deleteSale, // For deleting sales
-    isSalesLoaded 
+  const {
+    sales: allSalesTransactions, // Renamed to reflect it's transactions
+    // editSale, // Removed for now
+    // deleteSale, // Removed for now
+    isSalesLoaded
   } = useSalesStorage();
 
   const [product, setProduct] = useState<Product | null | undefined>(null);
   const [isEditProductModalOpen, setIsEditProductModalOpen] = useState(false);
   const [isDeleteProductDialogOpen, setIsDeleteProductDialogOpen] = useState(false);
 
-  // State for EditSaleModal
-  const [isEditSaleModalOpen, setIsEditSaleModalOpen] = useState(false);
-  const [saleToEdit, setSaleToEdit] = useState<Sale | null>(null);
-  
-  // State for DeleteSaleDialog
-  const [isDeleteSaleDialogOpen, setIsDeleteSaleDialogOpen] = useState(false);
-  const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
+  // State for EditSaleModal (removed for now)
+  // const [isEditSaleModalOpen, setIsEditSaleModalOpen] = useState(false);
+  // const [saleToEdit, setSaleToEdit] = useState<SaleItem | null>(null); // Would be SaleItem
+
+  // State for DeleteSaleDialog (removed for now)
+  // const [isDeleteSaleDialogOpen, setIsDeleteSaleDialogOpen] = useState(false);
+  // const [saleToDelete, setSaleToDelete] = useState<SaleItem | null>(null); // Would be SaleItem
 
 
   useEffect(() => {
@@ -97,25 +98,49 @@ export default function ProductDetailPage() {
   }, [productId, productsLoaded, getProductById]);
 
 
-  const productSales = useMemo(() => {
-    if (!product) return [];
-    // Ensure sales are sorted by timestamp for this product
-    return sales
-      .filter(sale => sale.productId === product.id)
-      .sort((a, b) => b.saleTimestamp - a.saleTimestamp); // Sort by most recent first for table
-  }, [sales, product]);
+  const productSaleItems = useMemo((): SaleItem[] => {
+    if (!product || !isSalesLoaded) return [];
+    const items: SaleItem[] = [];
+    allSalesTransactions.forEach(transaction => {
+      (transaction.items || []).forEach(item => {
+        if (item.product_id === product.id) {
+          // Add transaction timestamp to item for sorting in chart/table if needed directly
+          items.push({ ...item, transaction_timestamp: transaction.sale_timestamp } as SaleItem & {transaction_timestamp: number});
+        }
+      });
+    });
+    return items.sort((a, b) => (b as any).transaction_timestamp - (a as any).transaction_timestamp); // Sort by most recent first
+  }, [allSalesTransactions, product, isSalesLoaded]);
 
   const salesChartData = useMemo(() => {
-    // For chart, sort by oldest first
-    return productSales
-      .slice() // Create a copy before reversing for chart
-      .reverse()
-      .map(sale => ({
-        originalDate: new Date(sale.saleTimestamp).toISOString(),
-        date: format(new Date(sale.saleTimestamp), 'MMM d', { locale: arSA }), 
-        quantitySold: sale.quantitySold,
+    return productSaleItems
+      .slice()
+      .reverse() // For chart, sort by oldest first
+      .map(item => ({
+        originalDate: new Date((item as any).transaction_timestamp).toISOString(),
+        date: format(new Date((item as any).transaction_timestamp), 'MMM d', { locale: arSA }),
+        quantitySold: item.quantitySold,
     }));
-  }, [productSales]);
+  }, [productSaleItems]);
+  
+  const salesForTable = useMemo((): Sale[] => {
+    if (!product || !isSalesLoaded) return [];
+    // Reconstruct Sale transactions that contain items of the current product
+    // This is needed if SalesTable expects full Sale[] objects with filtered items
+    // However, our SalesTable now flattens items. So we can pass allSalesTransactions
+    // and SalesTable will internally filter if we modify it, or we pass productSaleItems directly.
+    // For now, SalesTable takes Sale[] and flattens. Let's filter transactions.
+    return allSalesTransactions
+        .filter(transaction => (transaction.items || []).some(item => item.product_id === product.id))
+        .map(transaction => ({
+            ...transaction,
+            // Optionally, filter items within the transaction if SalesTable doesn't do it
+            // items: (transaction.items || []).filter(item => item.product_id === product.id)
+        }))
+        .sort((a,b) => b.sale_timestamp - a.sale_timestamp);
+
+  }, [allSalesTransactions, product, isSalesLoaded]);
+
 
   const salesChartConfig = {
     quantitySold: {
@@ -137,7 +162,7 @@ export default function ProductDetailPage() {
   const handleSaveEditedProduct = (id: string, data: ProductFormData) => {
     const edited = editProduct(id, data);
     if (edited) {
-      setProduct(edited); 
+      setProduct(edited);
       toast({
         title: "نجاح",
         description: `تم تعديل المنتج "${edited.name}" بنجاح.`,
@@ -155,10 +180,6 @@ export default function ProductDetailPage() {
 
   const handleConfirmDeleteProduct = () => {
     if (product) {
-      // Before deleting product, consider if associated sales should also be handled (e.g., anonymized or cascade deleted).
-      // For now, sales will remain but might point to a non-existent product if not careful.
-      // A more robust system might prevent product deletion if sales exist, or archive the product.
-      // For this iteration, we just delete the product.
       deleteProduct(product.id);
       toast({
         title: "نجاح",
@@ -166,76 +187,12 @@ export default function ProductDetailPage() {
         variant: "default",
       });
       setIsDeleteProductDialogOpen(false);
-      router.push('/products'); 
+      router.push('/products');
     }
   };
 
-  // --- Sale Edit/Delete Handlers ---
-  const handleEditSaleTrigger = (sale: Sale) => {
-    setSaleToEdit(sale); // product for sale is the current page's product
-    setIsEditSaleModalOpen(true);
-  };
-
-  const handleSaveEditedSale = (
-    saleId: string, 
-    originalSale: Sale, 
-    updatedFormData: EditSaleFormData
-  ) => {
-    const editedSale = editSale(saleId, updatedFormData);
-    if (editedSale && product) { // product should be the current page product
-      const quantityDifference = originalSale.quantitySold - editedSale.quantitySold;
-      
-      if (quantityDifference > 0) { 
-        increaseProductQuantity(product.id, quantityDifference);
-      } else if (quantityDifference < 0) {
-        decreaseProductQuantity(product.id, -quantityDifference);
-      }
-      setProduct(getProductById(product.id)); // Refresh product state
-
-      toast({
-        title: "نجاح",
-        description: `تم تعديل عملية البيع للمنتج "${editedSale.productNameSnapshot}" بنجاح.`,
-        variant: "default",
-      });
-    } else {
-      toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء تعديل عملية البيع.",
-        variant: "destructive",
-      });
-    }
-    setIsEditSaleModalOpen(false);
-    setSaleToEdit(null);
-  };
-
-  const handleDeleteSaleTrigger = (sale: Sale) => {
-    setSaleToDelete(sale);
-    setIsDeleteSaleDialogOpen(true);
-  };
-
-  const handleConfirmDeleteSale = () => {
-    if (saleToDelete && product) {
-      const deleted = deleteSale(saleToDelete.id);
-      if (deleted) {
-        increaseProductQuantity(product.id, saleToDelete.quantitySold);
-        setProduct(getProductById(product.id)); // Refresh product state
-        toast({
-          title: "نجاح",
-          description: `تم حذف عملية البيع للمنتج "${saleToDelete.productNameSnapshot}" بنجاح.`,
-          variant: "default",
-        });
-      } else {
-         toast({
-          title: "خطأ",
-          description: "حدث خطأ أثناء حذف عملية البيع.",
-          variant: "destructive",
-        });
-      }
-    }
-    setIsDeleteSaleDialogOpen(false);
-    setSaleToDelete(null);
-  };
-
+  // --- Sale Edit/Delete Handlers (Temporarily Removed) ---
+  // These need to be re-implemented considering the new Sale/SaleItem structure.
 
   if (!productsLoaded || !isSalesLoaded) {
     return (
@@ -309,16 +266,16 @@ export default function ProductDetailPage() {
               <div>
                 <p className="text-muted-foreground">سعر الجملة</p>
                 <p className="font-medium">
-                  {typeof product.wholesalePrice === 'number' 
-                    ? product.wholesalePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+                  {typeof product.wholesalePrice === 'number'
+                    ? product.wholesalePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                     : '0.00'} د.ج / {unitSuffix[product.type]}
                 </p>
               </div>
               <div>
                 <p className="text-muted-foreground">سعر البيع (التجزئة)</p>
                 <p className="font-medium">
-                  {typeof product.retailPrice === 'number' 
-                    ? product.retailPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+                  {typeof product.retailPrice === 'number'
+                    ? product.retailPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                     : '0.00'} د.ج / {unitSuffix[product.type]}
                 </p>
               </div>
@@ -327,8 +284,8 @@ export default function ProductDetailPage() {
                 <p className="font-medium">{product.quantity.toLocaleString()} {unitSuffix[product.type]}</p>
               </div>
               <div className="col-span-2 sm:col-span-1">
-                <p className="text-muted-foreground">آخر تحديث</p>
-                <p className="font-medium">{format(new Date(product.timestamp), 'PPpp', { locale: arSA })}</p>
+                <p className="text-muted-foreground">آخر تحديث للمنتج</p>
+                <p className="font-medium">{format(new Date(product.updated_at), 'PPpp', { locale: arSA })}</p>
               </div>
             </div>
           </CardContent>
@@ -343,7 +300,7 @@ export default function ProductDetailPage() {
             <CardDescription>الكمية المباعة من هذا المنتج.</CardDescription>
           </CardHeader>
           <CardContent>
-            {productSales.length > 0 ? (
+            {productSaleItems.length > 0 ? (
               <div className="h-[300px] w-full">
                 <ChartContainer config={salesChartConfig} className="w-full h-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -352,7 +309,7 @@ export default function ProductDetailPage() {
                       margin={{
                         top: 5,
                         right: 10,
-                        left: -20, 
+                        left: -20,
                         bottom: 5,
                       }}
                     >
@@ -417,11 +374,11 @@ export default function ProductDetailPage() {
             <CardDescription>جميع عمليات البيع المسجلة لهذا المنتج.</CardDescription>
           </CardHeader>
           <CardContent className="p-0 md:p-4">
-            <SalesTable 
-                sales={productSales} 
-                showActions={true}
-                onEditSaleTrigger={handleEditSaleTrigger}
-                onDeleteSaleTrigger={handleDeleteSaleTrigger}
+            <SalesTable
+                sales={salesForTable} // Pass the filtered transactions
+                showActions={false} // Actions disabled for now
+                // onEditSaleTrigger={handleEditSaleTrigger} // Removed
+                // onDeleteSaleTrigger={handleDeleteSaleTrigger} // Removed
             />
           </CardContent>
         </Card>
@@ -436,38 +393,7 @@ export default function ProductDetailPage() {
         />
       )}
 
-      {saleToEdit && product && (
-        <EditSaleModal
-          isOpen={isEditSaleModalOpen}
-          onClose={() => {
-            setIsEditSaleModalOpen(false);
-            setSaleToEdit(null);
-          }}
-          onSaveEdit={handleSaveEditedSale}
-          saleToEdit={saleToEdit}
-          productForSale={product} // The current page's product
-        />
-      )}
-
-      {saleToDelete && (
-        <AlertDialog open={isDeleteSaleDialogOpen} onOpenChange={setIsDeleteSaleDialogOpen}>
-          <AlertDialogContent dir="rtl">
-            <AlertDialogHeader>
-              <AlertDialogTitle>تأكيد حذف البيع</AlertDialogTitle>
-              <AlertDialogDescription>
-                هل أنت متأكد أنك تريد حذف عملية البيع للمنتج "{saleToDelete.productNameSnapshot}"؟ 
-                سيتم إعادة الكمية المباعة ({saleToDelete.quantitySold.toLocaleString()}) إلى المخزون.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>إلغاء</AlertDialogCancel>
-              <AlertDialogAction onClick={handleConfirmDeleteSale} className={cn(buttonVariants({variant: "destructive"}))}>
-                تأكيد الحذف
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
+      {/* EditSaleModal and AlertDialog for sale delete are removed for now */}
     </div>
   );
 }

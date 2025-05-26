@@ -2,16 +2,15 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { Sale, Product, EditSaleFormData } from '@/lib/types';
+import type { Sale, Product, SaleItem, EditSaleFormData } from '@/lib/types';
 
 const SALES_STORAGE_KEY = 'shelftrack_sales';
 
 interface SalesState {
-  sales: Sale[];
+  sales: Sale[]; // Now an array of Sale (transaction) objects
   isSalesLoaded: boolean;
 }
 
-// --- Module-level shared state and logic ---
 let memoryStateSales: SalesState = {
   sales: [],
   isSalesLoaded: false,
@@ -21,44 +20,32 @@ const salesListeners: Array<(state: SalesState) => void> = [];
 
 export const SalesActionTypes = {
   SET_LOADED: 'SET_LOADED_SALES',
-  ADD_SALE: 'ADD_SALE',
-  EDIT_SALE: 'EDIT_SALE',
-  DELETE_SALE: 'DELETE_SALE',
+  ADD_TRANSACTION: 'ADD_TRANSACTION', // Changed from ADD_SALE
+  // EDIT_SALE and DELETE_SALE need significant rework for transaction/item model
+  // Temporarily, we might disable them or simplify.
+  // For now, let's assume edit/delete will be handled later.
   CLEAR_ALL_SALES: 'CLEAR_ALL_SALES',
 } as const;
 
 type SalesAction =
   | { type: typeof SalesActionTypes.SET_LOADED; payload: Sale[] }
-  | { type: typeof SalesActionTypes.ADD_SALE; payload: { newSale: Sale } }
-  | { type: typeof SalesActionTypes.EDIT_SALE; payload: { saleId: string; updatedData: EditSaleFormData } }
-  | { type: typeof SalesActionTypes.DELETE_SALE; payload: { saleId: string } }
+  | { type: typeof SalesActionTypes.ADD_TRANSACTION; payload: { newTransaction: Sale } }
   | { type: typeof SalesActionTypes.CLEAR_ALL_SALES };
+  // | { type: typeof SalesActionTypes.EDIT_SALE; payload: { saleId: string; itemId: string; updatedData: EditSaleFormData } } // Example for future
+  // | { type: typeof SalesActionTypes.DELETE_SALE; payload: { saleId: string; itemId?: string } }; // Example for future
 
-function salesReducer(currentSales: Sale[], action: SalesAction): Sale[] { // Changed from state to currentSales array
+
+function salesReducer(currentTransactions: Sale[], action: SalesAction): Sale[] {
   switch (action.type) {
     case SalesActionTypes.SET_LOADED:
-      return action.payload.sort((a, b) => b.saleTimestamp - a.saleTimestamp);
-    case SalesActionTypes.ADD_SALE:
-      return [action.payload.newSale, ...currentSales].sort((a, b) => b.saleTimestamp - a.saleTimestamp);
-    case SalesActionTypes.EDIT_SALE: {
-      return currentSales.map(sale => {
-        if (sale.id === action.payload.saleId) {
-          return {
-            ...sale,
-            quantitySold: action.payload.updatedData.quantitySold,
-            saleTimestamp: new Date(action.payload.updatedData.saleTimestamp).getTime(),
-            totalSaleAmount: sale.retailPricePerUnitSnapshot * action.payload.updatedData.quantitySold,
-          };
-        }
-        return sale;
-      }).sort((a, b) => b.saleTimestamp - a.saleTimestamp);
-    }
-    case SalesActionTypes.DELETE_SALE:
-      return currentSales.filter(s => s.id !== action.payload.saleId);
+      return action.payload.sort((a, b) => b.sale_timestamp - a.sale_timestamp);
+    case SalesActionTypes.ADD_TRANSACTION:
+      return [action.payload.newTransaction, ...currentTransactions].sort((a, b) => b.sale_timestamp - a.sale_timestamp);
     case SalesActionTypes.CLEAR_ALL_SALES:
       return [];
+    // Placeholder for future EDIT_SALE / DELETE_SALE logic
     default:
-      return currentSales;
+      return currentTransactions;
   }
 }
 
@@ -71,7 +58,6 @@ function dispatchSales(action: SalesAction) {
   if (action.type === SalesActionTypes.SET_LOADED) {
     memoryStateSales.isSalesLoaded = true;
   }
-
 
   if (memoryStateSales.isSalesLoaded) {
     try {
@@ -88,7 +74,6 @@ function dispatchSales(action: SalesAction) {
     salesListeners.forEach((listener) => listener(memoryStateSales));
   });
 }
-// --- End of Module-level shared state and logic ---
 
 export function useSalesStorage() {
   const [state, setState] = useState<SalesState>(memoryStateSales);
@@ -100,6 +85,8 @@ export function useSalesStorage() {
         const storedSales = localStorage.getItem(SALES_STORAGE_KEY);
         if (storedSales) {
           initialSales = JSON.parse(storedSales);
+          // Ensure loaded sales have an items array
+          initialSales = initialSales.map(s => ({ ...s, items: s.items || [] }));
         }
       } catch (error) {
         console.error("Failed to load sales from localStorage:", error);
@@ -109,7 +96,7 @@ export function useSalesStorage() {
 
     const listener = (newState: SalesState) => setState(newState);
     salesListeners.push(listener);
-    
+
     if (memoryStateSales.isSalesLoaded && !state.isSalesLoaded) {
         setState(memoryStateSales);
     }
@@ -122,40 +109,66 @@ export function useSalesStorage() {
     };
   }, [state.isSalesLoaded]);
 
-  const addSale = useCallback((
+  const addSaleTransaction = useCallback(( // Renamed from addSale
     productSold: Product,
     quantitySold: number,
-    saleTimestamp: number
-  ): Sale => {
-    const newSale: Sale = {
-      id: crypto.randomUUID(),
-      productId: productSold.id,
+    saleTimestamp: number // Unix timestamp
+  ): Sale => { // Returns the new transaction
+    const saleItemId = crypto.randomUUID();
+    const transactionId = crypto.randomUUID();
+    const now = Date.now();
+
+    const newSaleItem: SaleItem = {
+      id: saleItemId,
+      sale_id: transactionId,
+      product_id: productSold.id,
       productNameSnapshot: productSold.name,
       quantitySold,
       wholesalePricePerUnitSnapshot: productSold.wholesalePrice,
       retailPricePerUnitSnapshot: productSold.retailPrice,
-      totalSaleAmount: productSold.retailPrice * quantitySold,
-      saleTimestamp,
+      itemTotalAmount: productSold.retailPrice * quantitySold,
+      productType: productSold.type, // For client-side use if needed
     };
-    dispatchSales({ type: SalesActionTypes.ADD_SALE, payload: { newSale } });
-    return newSale;
+
+    const newTransaction: Sale = {
+      id: transactionId,
+      sale_timestamp: saleTimestamp,
+      total_transaction_amount: newSaleItem.itemTotalAmount,
+      items: [newSaleItem],
+      created_at: now,
+      updated_at: now,
+    };
+
+    dispatchSales({ type: SalesActionTypes.ADD_TRANSACTION, payload: { newTransaction } });
+    return newTransaction;
   }, []);
 
+  // editSale and deleteSale need significant rework for the new transaction/item model.
+  // They are temporarily simplified/commented to avoid breaking changes.
+  // A proper implementation will be part of a future update focused on cart/transaction management.
+
   const editSale = useCallback((saleId: string, updatedData: EditSaleFormData): Sale | undefined => {
-    dispatchSales({ type: SalesActionTypes.EDIT_SALE, payload: { saleId, updatedData } });
+    // This logic is now incorrect for multi-item sales.
+    // Placeholder: In a real scenario, you'd identify the item within the transaction.
+    console.warn("editSale functionality needs to be updated for multi-item transactions.");
+    // dispatchSales({ type: SalesActionTypes.EDIT_SALE, payload: { saleId, updatedData } });
     return memoryStateSales.sales.find(s => s.id === saleId);
   }, []);
 
   const deleteSale = useCallback((saleId: string): boolean => {
+    // This logic is now incorrect for multi-item sales.
+    // Placeholder: In a real scenario, you'd delete the transaction and its items.
+    console.warn("deleteSale functionality needs to be updated for multi-item transactions.");
     const saleExists = memoryStateSales.sales.some(s => s.id === saleId);
-    if (saleExists) {
-      dispatchSales({ type: SalesActionTypes.DELETE_SALE, payload: { saleId } });
-      return true;
-    }
+    // if (saleExists) {
+    //   dispatchSales({ type: SalesActionTypes.DELETE_SALE, payload: { saleId } });
+    //   return true;
+    // }
     return false;
   }, []);
-  
+
   const getSaleById = useCallback((saleId: string): Sale | undefined => {
+    // This would return the whole transaction
     return state.sales.find(s => s.id === saleId);
   }, [state.sales]);
 
@@ -167,18 +180,18 @@ export function useSalesStorage() {
      dispatchSales(action);
   },[]);
 
-  const sortedSales = useMemo(() => {
-    return state.sales; 
+  const allSalesTransactions = useMemo(() => {
+    return state.sales;
   }, [state.sales]);
 
-  return { 
-    sales: sortedSales, 
-    addSale, 
-    editSale,
-    deleteSale,
+  return {
+    sales: allSalesTransactions, // This is now an array of Sale (transaction) objects
+    addSale: addSaleTransaction, // Keep 'addSale' as the public API name for now, but it adds a transaction
+    editSale, // Needs rework
+    deleteSale, // Needs rework
     getSaleById,
     clearAllSales,
-    dispatchSales: salesDispatch, // Expose dispatch for direct use like SET_LOADED
-    isSalesLoaded: state.isSalesLoaded 
+    dispatchSales: salesDispatch,
+    isSalesLoaded: state.isSalesLoaded
   };
 }

@@ -2,14 +2,14 @@
 export type ProductType = 'powder' | 'liquid' | 'unit';
 
 export interface Product {
-  id: string; // uuid from Supabase
+  id: string;
   name: string;
   type: ProductType;
   wholesalePrice: number;
   retailPrice: number;
   quantity: number;
-  created_at: string; // ISO 8601 string from Supabase
-  updated_at: string; // ISO 8601 string from Supabase
+  created_at: string; // ISO 8601 string from Supabase (or client-side Date.now())
+  updated_at: string; // ISO 8601 string
 }
 
 export interface ProductFormData {
@@ -22,46 +22,58 @@ export interface ProductFormData {
 
 // Represents an individual item within a sale transaction
 export interface SaleItem {
-  id: string; // uuid from Supabase, for the sale_item record itself
-  sale_id: string; // Foreign key to Sale
-  product_id: string; // Foreign key to Product
-  productNameSnapshot: string; // Snapshot of product name at time of sale
+  id: string; // uuid for the sale_item record itself
+  sale_id: string; // Foreign key to Sale transaction
+  product_id: string;
+  productNameSnapshot: string;
   quantitySold: number;
   wholesalePricePerUnitSnapshot: number;
   retailPricePerUnitSnapshot: number;
   itemTotalAmount: number; // Calculated: retailPricePerUnitSnapshot * quantitySold
-  created_at: string; // ISO 8601 string from Supabase
-  updated_at: string; // ISO 8601 string from Supabase
-  // Client-side only, not in DB, for displaying in cart
-  productType?: ProductType; 
+  // created_at and updated_at for SaleItem can be managed if needed,
+  // but for localStorage, the parent Sale's timestamp might suffice for sorting/display.
+  // For Supabase, these would be standard:
+  // created_at: string;
+  // updated_at: string;
+
+  // Client-side only, not in DB, for displaying in cart if we build a cart UI
+  productType?: ProductType;
 }
 
 // Represents the overall sale transaction (invoice/receipt)
 export interface Sale {
-  id: string; // uuid from Supabase, for the sale transaction
-  sale_timestamp: string; // ISO 8601 string for the actual sale transaction time
+  id: string; // uuid for the sale transaction
+  sale_timestamp: number; // Unix timestamp (milliseconds) for the actual sale transaction time
   total_transaction_amount: number; // Sum of all itemTotalAmounts for this sale
-  created_at: string; // ISO 8601 string from Supabase
-  updated_at: string; // ISO 8601 string from Supabase
-  items?: SaleItem[]; // Optional: if fetched/displayed together, not a DB column in 'sales'
+  items: SaleItem[]; // Array of items in this transaction
+  created_at: number; // Unix timestamp for when the sale record was created
+  updated_at: number; // Unix timestamp for when the sale record was last updated
 }
 
 
-// Form data for adding a single item to the current sale/cart
+// Form data for adding a single item to the current sale/cart in a future cart UI
 export interface AddToCartFormData {
   productId: string;
   quantitySold: number;
 }
 
-// Form data for the overall sale finalization (might just be timestamp if items are managed separately)
-export interface FinalizeSaleFormData {
+// Form data for the current single-item sale recording modal
+export interface SaleFormData {
+  productId: string;
+  quantitySold: number;
   saleTimestamp: string; // Expected format for datetime-local input: "YYYY-MM-DDTHH:mm"
+}
+
+
+// Form data for finalizing a sale in a future cart UI
+export interface FinalizeSaleFormData {
+  saleTimestamp: string;
   // items will be taken from the client-side cart state
 }
 
-export interface EditSaleFormData { // This will likely need rethinking for multi-item sales.
-                                    // Editing might happen at item level or sale level (e.g. timestamp)
-  quantitySold: number; // If editing a specific item
+// This will need to be re-thought for editing items within a transaction or the transaction itself.
+export interface EditSaleFormData {
+  quantitySold: number; // If editing a specific item's quantity
   saleTimestamp: string; // If editing the overall sale timestamp
 }
 
@@ -69,29 +81,24 @@ export interface EditSaleFormData { // This will likely need rethinking for mult
 export type SalesTimeframe = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'half_yearly' | 'yearly';
 
 export interface SalesDataPoint {
-  date: string; // Could be day, week start, month start, etc.
+  date: string;
   profit: number;
-  loss: number; // Or 'revenue' and 'cost'
+  loss: number;
 }
 
 export interface Notification {
   id: string;
   message: string;
-  timestamp: number; 
+  timestamp: number;
   read: boolean;
-  productId?: string; 
+  productId?: string;
   href?: string;
-  // For Supabase, timestamps would likely be strings (ISO 8601)
-  // created_at?: string;
-  // updated_at?: string;
 }
 
 export interface BackupLogEntry {
   id: string;
-  timestamp: number; 
+  timestamp: number;
   periodStart: number;
   periodEnd: number;
   fileName: string;
-  // For Supabase, timestamps would likely be strings (ISO 8601)
-  // created_at?: string; 
 }
