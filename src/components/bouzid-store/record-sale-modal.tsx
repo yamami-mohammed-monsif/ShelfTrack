@@ -57,7 +57,7 @@ const createAddItemFormSchema = (allProducts: Product[], currentCartItems: CartI
   quantity: z.coerce
     .number({
       required_error: "الكمية مطلوبة.",
-      invalid_type_error: ""
+      invalid_type_error: "" 
     })
     .positive({ message: 'الكمية يجب أن تكون أكبر من صفر.' }),
 }).superRefine((values, ctx) => {
@@ -115,8 +115,6 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
   });
 
   useEffect(() => {
-    // Re-validate or update schema context if products/cartItems change
-    // This ensures the schema has the latest stock info for validation
     // @ts-ignore
     addItemForm.resolver = zodResolver(createAddItemFormSchema(productsRef.current, cartItemsRef.current));
     addItemForm.trigger();
@@ -224,14 +222,14 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
       id: finalSaleId,
       sale_timestamp: saleTimestamp,
       items: cartItems.map(cartItem => ({
-        id: crypto.randomUUID(),
-        sale_id: finalSaleId,
+        id: crypto.randomUUID(), // This is for the SaleItem record
+        sale_id: finalSaleId, // Link back to the main Sale transaction
         product_id: cartItem.product_id,
         productNameSnapshot: cartItem.productNameSnapshot,
         quantitySold: cartItem.quantitySold,
         wholesalePricePerUnitSnapshot: cartItem.wholesalePricePerUnitSnapshot,
         retailPricePerUnitSnapshot: cartItem.retailPricePerUnitSnapshot,
-        itemTotalAmount: cartItem.itemTotalAmount,
+        itemTotalAmount: cartItem.itemTotalAmount, // retailPricePerUnitSnapshot * quantitySold
         productType: cartItem.productType,
       })),
       total_transaction_amount: grandTotal,
@@ -254,10 +252,10 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
       if (!open) onClose();
       setProductComboboxOpen(false);
     }}>
-      <DialogContent className="sm:max-w-lg bg-card text-card-foreground flex flex-col max-h-[90vh] p-4 sm:p-6">
-        <DialogHeader className="mb-2">
-          <DialogTitle className="text-center text-xl">تسجيل عملية بيع جديدة</DialogTitle>
-          <DialogDescription className="text-center">
+      <DialogContent className="sm:max-w-lg bg-card text-card-foreground flex flex-col max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogHeader className="mb-2 text-center">
+          <DialogTitle className="text-xl">تسجيل عملية بيع جديدة</DialogTitle>
+          <DialogDescription>
             أضف المنتجات إلى السلة ثم قم بإتمام عملية البيع.
           </DialogDescription>
         </DialogHeader>
@@ -361,7 +359,8 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
           </form>
         </Form>
 
-        <ScrollArea className="flex-grow border rounded-md p-1 mb-4 bg-muted/20">
+        {/* Cart Items List - Removed flex-grow */}
+        <ScrollArea className="border rounded-md p-1 mb-4 bg-muted/20">
           {cartItems.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">السلة فارغة</p>
           ) : (
@@ -427,3 +426,4 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
     </Dialog>
   );
 }
+
