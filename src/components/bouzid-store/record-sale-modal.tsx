@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ShoppingCart, CalendarClock, PackageSearch, Check, ChevronsUpDown, PlusCircle, Trash2, ListOrdered } from 'lucide-react';
+import { ShoppingCart, CalendarClock, Check, ChevronsUpDown, PlusCircle, Trash2, ListOrdered } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -35,14 +35,12 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from '@/components/ui/form';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import type { AddToCartFormData, Product, CartItem, Sale, SaleItem } from '@/lib/types';
+import type { AddToCartFormData, Product, CartItem, Sale } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { unitSuffix } from '@/lib/product-utils';
 import { useToast } from "@/hooks/use-toast";
@@ -73,7 +71,7 @@ const createAddItemFormSchema = (allProducts: Product[], currentCartItems: CartI
   }
 
   if (typeof values.quantity !== 'number' || Number.isNaN(values.quantity)) {
-    if (values.quantity !== undefined) {
+    if (values.quantity !== undefined) { // Only add issue if it's not simply undefined (initial state)
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "الكمية يجب أن تكون رقماً صالحاً.", path: ['quantity'] });
     }
     return;
@@ -119,7 +117,6 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
   });
    
   useEffect(() => {
-    // Ensure resolver is updated if products or cartItems change, then re-trigger validation
     addItemForm.trigger(); 
   }, [products, cartItems, addItemForm]);
 
@@ -253,10 +250,10 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       if (!open) onClose();
-      setProductComboboxOpen(false); // Ensure combobox popover closes when dialog closes
+      setProductComboboxOpen(false); 
     }}>
-      <DialogContent className="sm:max-w-lg bg-card text-card-foreground flex flex-col max-h-[90vh]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-lg bg-card text-card-foreground flex flex-col max-h-[90vh] p-4 sm:p-6"> {/* Adjusted DialogContent padding */}
+        <DialogHeader className="mb-2"> {/* Added margin-bottom to header */}
           <DialogTitle className="text-center text-xl">تسجيل عملية بيع جديدة</DialogTitle>
           <DialogDescription className="text-center">
             أضف المنتجات إلى السلة ثم قم بإتمام عملية البيع.
@@ -266,110 +263,108 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
         <Form {...addItemForm}>
           <form
             onSubmit={addItemForm.handleSubmit(handleAddItemToCart)}
-            className="space-y-4 p-1" // Padding applied to the form itself
+            className="mb-4" // Added margin-bottom to form
           >
-            <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_auto] gap-3 items-start">
-                <FormField
-                  control={addItemForm.control}
-                  name="productId"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>المنتج</FormLabel>
-                      <Popover open={productComboboxOpen} onOpenChange={setProductComboboxOpen}>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              className={cn("w-full justify-between min-h-[2.5rem]", !field.value && "text-muted-foreground")}
-                            >
-                              {field.value ? products.find(p => p.id === field.value)?.name : "اختر منتجاً..."}
-                              <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-[250px] overflow-y-auto">
-                          <Command>
-                            <CommandInput
-                              placeholder="ابحث عن منتج..."
-                              value={productSearchValue}
-                              onValueChange={setProductSearchValue}
-                            />
-                            <CommandList>
-                              <CommandEmpty>لم يتم العثور على منتج.</CommandEmpty>
-                              <CommandGroup>
-                                {filteredProductsForDropdown.map((product) => (
-                                  <CommandItem
-                                    value={product.name}
-                                    key={product.id}
-                                    onSelect={() => handleProductSelect(product)}
-                                  >
-                                    <Check className={cn("me-2 h-4 w-4", product.id === field.value ? "opacity-100" : "opacity-0")} />
-                                    {product.name} <span className="text-xs text-muted-foreground ms-1">(المتوفر: {product.quantity.toLocaleString()})</span>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={addItemForm.control}
-                  name="quantity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>الكمية</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          step={quantityStepForAddItemForm}
-                          {...field}
-                          value={field.value === undefined || Number.isNaN(Number(field.value)) ? "" : field.value}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                            const valueAsString = e.target.value;
-                            if (valueAsString === "" || valueAsString === "-") {
-                              field.onChange(undefined);
+            <div className="flex items-start gap-2"> {/* For RTL: Product | Quantity | Add Button visually */}
+               <FormField 
+                control={addItemForm.control}
+                name="productId"
+                render={({ field }) => (
+                  <FormItem className="flex-1"> {/* Product Selector */}
+                    <Popover open={productComboboxOpen} onOpenChange={setProductComboboxOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className={cn("w-full justify-between min-h-[2.5rem]", !field.value && "text-muted-foreground")}
+                          >
+                            {field.value ? products.find(p => p.id === field.value)?.name : "منتج"}
+                            <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-[250px] overflow-y-auto">
+                        <Command>
+                          <CommandInput
+                            placeholder="ابحث عن منتج..."
+                            value={productSearchValue}
+                            onValueChange={setProductSearchValue}
+                          />
+                          <CommandList>
+                            <CommandEmpty>لم يتم العثور على منتج.</CommandEmpty>
+                            <CommandGroup>
+                              {filteredProductsForDropdown.map((product) => (
+                                <CommandItem
+                                  value={product.name}
+                                  key={product.id}
+                                  onSelect={() => handleProductSelect(product)}
+                                >
+                                  <Check className={cn("me-2 h-4 w-4", product.id === field.value ? "opacity-100" : "opacity-0")} />
+                                  {product.name} <span className="text-xs text-muted-foreground ms-1">(المتوفر: {product.quantity.toLocaleString()})</span>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={addItemForm.control}
+                name="quantity"
+                render={({ field }) => (
+                  <FormItem className="w-24"> {/* Quantity Input */}
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        step={quantityStepForAddItemForm}
+                        {...field}
+                        value={field.value === undefined || Number.isNaN(Number(field.value)) ? "" : field.value}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          const valueAsString = e.target.value;
+                          if (valueAsString === "" || valueAsString === "-") {
+                            field.onChange(undefined);
+                          } else {
+                            const valueAsNum = e.target.valueAsNumber;
+                            if (Number.isNaN(valueAsNum)) {
+                              field.onChange(valueAsString); 
                             } else {
-                              const valueAsNum = e.target.valueAsNumber;
-                              if (Number.isNaN(valueAsNum)) {
-                                field.onChange(valueAsString); 
-                              } else {
-                                field.onChange(valueAsNum);
-                              }
+                              field.onChange(valueAsNum);
                             }
-                          }}
-                          disabled={!addItemForm.getValues('productId')}
-                          className="min-h-[2.5rem]"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" size="default" className="self-end min-h-[2.5rem]" disabled={!addItemForm.formState.isValid || !addItemForm.getValues('productId')}>
-                  <PlusCircle className="me-2 h-5 w-5" />
-                  إضافة
-                </Button>
+                          }
+                        }}
+                        disabled={!addItemForm.getValues('productId')}
+                        className="min-h-[2.5rem] text-center"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" size="default" className="min-h-[2.5rem]" disabled={!addItemForm.formState.isValid || !addItemForm.getValues('productId')}>
+                <PlusCircle className="me-2 h-5 w-5" />
+                ADD.
+              </Button>
             </div>
           </form>
         </Form>
         
-        {cartItems.length > 0 && <Separator className="my-4" />}
-
-        <ScrollArea className="flex-grow overflow-y-auto p-1"> {/* REMOVED max-h-[300px] */}
+        {/* Cart Display Area - "السلة CART السلة" */}
+        <ScrollArea className="flex-grow border rounded-md p-3 mb-4 bg-muted/20">
           {cartItems.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">سلة البيع فارغة.</p>
+            <p className="text-muted-foreground text-center py-4">السلة فارغة</p>
           ) : (
             <div className="space-y-3">
-              <h3 className="text-md font-semibold flex items-center"><ListOrdered className="me-2 h-5 w-5 text-primary"/>منتجات في السلة ({cartItems.length})</h3>
-              {cartItems.map((item, index) => (
-                <div key={item.tempId} className="flex items-center justify-between p-2 border rounded-md bg-muted/30 hover:bg-muted/50 transition-colors">
+              <h3 className="text-md font-semibold flex items-center sticky top-0 bg-muted/20 py-1 -mt-3 -mx-3 px-3 border-b mb-3 z-10">
+                <ListOrdered className="me-2 h-5 w-5 text-primary"/>السلة ({cartItems.length})
+              </h3>
+              {cartItems.map((item) => (
+                <div key={item.tempId} className="flex items-center justify-between p-2 border rounded-md bg-card hover:bg-card/90 transition-colors">
                   <div>
                     <p className="font-medium">{item.productNameSnapshot}</p>
                     <p className="text-xs text-muted-foreground">
@@ -385,35 +380,34 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
           )}
         </ScrollArea>
 
+        {/* Total Price Display */}
         {cartItems.length > 0 && (
-          <>
-            <Separator className="my-4" />
-            <div className="text-right text-lg font-bold p-2 bg-secondary text-secondary-foreground rounded-md">
-              الإجمالي الكلي: {grandTotal.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} د.ج
-            </div>
-            
-            <div className="mt-4 space-y-2 px-1"> {/* Added px-1 for consistency with other padded sections */}
-              <Label htmlFor="saleTimestampRecordModal" className="flex items-center">
-                <CalendarClock className="me-2 h-4 w-4 text-muted-foreground" />
-                تاريخ ووقت البيع
-              </Label>
-              <Input 
-                id="saleTimestampRecordModal"
-                type="datetime-local" 
-                value={saleTimestampString}
-                onChange={(e) => setSaleTimestampString(e.target.value)}
-                className="text-right"
-              />
-               { isNaN(new Date(saleTimestampString).getTime()) && 
-                 <p className="text-sm font-medium text-destructive">التاريخ والوقت غير صالح.</p> 
-               }
-            </div>
-          </>
+          <div className="text-lg font-bold p-3 border bg-muted/50 rounded-md text-center mb-4">
+            {grandTotal.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} د.ج
+          </div>
         )}
-
-        <DialogFooter className="mt-6 px-1 pb-1"> {/* Padding adjusted for consistency with DialogContent having p-6 */}
+            
+        {/* Sale Timestamp Input */}
+        <div className="mb-4">
+          <Label htmlFor="saleTimestampRecordModal" className="flex items-center mb-1">
+            <CalendarClock className="me-2 h-4 w-4 text-muted-foreground" />
+            تاريخ ووقت البيع
+          </Label>
+          <Input 
+            id="saleTimestampRecordModal"
+            type="datetime-local" 
+            value={saleTimestampString}
+            onChange={(e) => setSaleTimestampString(e.target.value)}
+            className="text-right w-full min-h-[2.5rem]" // Ensure full width
+          />
+            { isNaN(new Date(saleTimestampString).getTime()) && cartItems.length > 0 &&
+              <p className="text-sm font-medium text-destructive mt-1">التاريخ والوقت غير صالح.</p> 
+            }
+        </div>
+       
+        <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>
-            إلغاء
+            Cancel
           </Button>
           <Button 
             type="button" 
@@ -422,12 +416,10 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
             disabled={cartItems.length === 0 || isNaN(new Date(saleTimestampString).getTime())}
           >
             <ShoppingCart className="ms-2 h-4 w-4" />
-            إتمام البيع
+            SELL
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
-    
