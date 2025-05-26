@@ -38,7 +38,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Label } from '@/components/ui/label'; // Added import for basic Label
+import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -193,7 +193,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
         setCartItems(prevItems => [...prevItems, newCartItem]);
     }
 
-    toast({ title: "تمت الإضافة", description: `تم إضافة ${data.quantity} من "${product.name}" إلى السلة.`, variant: "default" });
+    toast({ title: "تمت الإضافة", description: `تم إضافة ${data.quantity.toLocaleString()} من "${product.name}" إلى السلة.`, variant: "default" });
     addItemForm.reset({ productId: '', quantity: undefined });
     setProductSearchValue(""); 
     addItemForm.clearErrors();
@@ -253,7 +253,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       if (!open) onClose();
-      setProductComboboxOpen(false);
+      setProductComboboxOpen(false); // Ensure combobox popover closes when dialog closes
     }}>
       <DialogContent className="sm:max-w-lg bg-card text-card-foreground flex flex-col max-h-[90vh]">
         <DialogHeader>
@@ -266,7 +266,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
         <Form {...addItemForm}>
           <form
             onSubmit={addItemForm.handleSubmit(handleAddItemToCart)}
-            className="space-y-4 p-1"
+            className="space-y-4 p-1" // Padding applied to the form itself
           >
             <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_auto] gap-3 items-start">
                 <FormField
@@ -362,7 +362,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
         
         {cartItems.length > 0 && <Separator className="my-4" />}
 
-        <ScrollArea className="flex-grow max-h-[300px] overflow-y-auto p-1">
+        <ScrollArea className="flex-grow overflow-y-auto p-1"> {/* REMOVED max-h-[300px] */}
           {cartItems.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">سلة البيع فارغة.</p>
           ) : (
@@ -392,14 +392,13 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
               الإجمالي الكلي: {grandTotal.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} د.ج
             </div>
             
-            {/* Replaced FormItem, FormLabel, FormControl, FormMessage with basic elements */}
-            <div className="mt-4 space-y-2">
-              <Label htmlFor="saleTimestamp" className="flex items-center">
+            <div className="mt-4 space-y-2 px-1"> {/* Added px-1 for consistency with other padded sections */}
+              <Label htmlFor="saleTimestampRecordModal" className="flex items-center">
                 <CalendarClock className="me-2 h-4 w-4 text-muted-foreground" />
                 تاريخ ووقت البيع
               </Label>
               <Input 
-                id="saleTimestamp"
+                id="saleTimestampRecordModal"
                 type="datetime-local" 
                 value={saleTimestampString}
                 onChange={(e) => setSaleTimestampString(e.target.value)}
@@ -412,7 +411,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
           </>
         )}
 
-        <DialogFooter className="mt-6">
+        <DialogFooter className="mt-6 px-1 pb-1"> {/* Padding adjusted for consistency with DialogContent having p-6 */}
           <Button type="button" variant="outline" onClick={onClose}>
             إلغاء
           </Button>
@@ -431,3 +430,4 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
   );
 }
 
+    
