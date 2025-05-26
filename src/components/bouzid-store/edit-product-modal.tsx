@@ -43,20 +43,21 @@ const createProductFormSchema = () => z.object({
   wholesalePrice: z.coerce
     .number({
       required_error: "سعر الجملة مطلوب.",
-      invalid_type_error: "سعر الجملة يجب أن يكون رقماً صالحاً."
+      invalid_type_error: ""
     })
     .positive({ message: 'سعر الجملة يجب أن يكون إيجابياً.' }),
   retailPrice: z.coerce
     .number({
       required_error: "سعر البيع مطلوب.",
-      invalid_type_error: "سعر البيع يجب أن يكون رقماً صالحاً."
+      invalid_type_error: ""
     })
     .positive({ message: 'سعر البيع يجب أن يكون إيجابياً.' }),
   quantity: z.coerce
     .number({
       required_error: "الكمية مطلوبة.",
+      invalid_type_error: ""
     })
-    .positive({ message: 'الكمية يجب أن تكون إيجابية.' }), // Changed from nonNegative to positive
+    .positive({ message: 'الكمية يجب أن تكون إيجابية.' }),
 }).superRefine((values, ctx) => {
   if (values.type === 'unit' && values.quantity !== undefined && !Number.isInteger(values.quantity)) {
     ctx.addIssue({

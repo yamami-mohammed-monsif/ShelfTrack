@@ -57,6 +57,7 @@ const createAddItemFormSchema = (allProducts: Product[], currentCartItems: CartI
   quantity: z.coerce
     .number({
       required_error: "الكمية مطلوبة.",
+      invalid_type_error: "" 
     })
     .positive({ message: 'الكمية يجب أن تكون أكبر من صفر.' }),
 }).superRefine((values, ctx) => {
