@@ -114,7 +114,6 @@ export default function ProductsClientContent() {
   if (!isLoaded) {
     return (
       <div className="flex flex-col min-h-screen bg-background">
-        {/* <AppHeader /> Removed, handled globally */}
         <main className="flex-grow flex items-center justify-center">
           <p className="text-foreground text-xl">جار التحميل...</p>
         </main>
@@ -124,7 +123,6 @@ export default function ProductsClientContent() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      {/* <AppHeader /> Removed, handled globally */}
       <main className="flex-grow p-4 md:p-8">
         <Card className="shadow-lg rounded-lg overflow-hidden">
           <CardHeader className="bg-card border-b">
@@ -224,3 +222,5 @@ export default function ProductsClientContent() {
     </div>
   );
 }
+
+    

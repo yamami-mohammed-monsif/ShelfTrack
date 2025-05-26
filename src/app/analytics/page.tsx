@@ -2,10 +2,9 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-// import { AppHeader } from '@/components/bouzid-store/app-header'; // No longer needed here
 import { useSalesStorage } from '@/hooks/use-sales-storage';
-import { useProductsStorage } from '@/hooks/use-products-storage'; 
-import type { Sale, Product } from '@/lib/types'; 
+import { useProductsStorage } from '@/hooks/use-products-storage';
+import type { Sale, Product } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, TooltipProps } from 'recharts';
@@ -29,6 +28,7 @@ import {
   startOfMonth,
   endOfMonth,
   startOfYear,
+  endOfYear, // Added endOfYear
   startOfHour,
   endOfHour,
   eachHourOfInterval,
@@ -40,7 +40,7 @@ import {
   min,
 } from 'date-fns';
 import { arSA } from 'date-fns/locale';
-import { unitSuffix } from '@/lib/product-utils'; 
+import { unitSuffix } from '@/lib/product-utils';
 
 type SalesAnalyticsTimeframe = 'daily' | 'weekly' | 'monthly' | 'last3months' | 'last6months' | 'yearly';
 
@@ -104,21 +104,21 @@ export default function SalesAnalyticsPage() {
         break;
       case 'monthly':
         start = startOfMonth(now);
-        end = min([now, endOfMonth(now)]);
+        end = min([endOfDay(now), endOfMonth(now)]); // Data up to end of today, or end of month if earlier
         break;
       case 'last3months':
-        start = startOfDay(subDays(now, 89));
+        start = startOfDay(subDays(now, 89)); // approx 90 days
         end = endOfDay(now);
         break;
       case 'last6months':
-        start = startOfDay(subDays(now, 179));
+        start = startOfDay(subDays(now, 179)); // approx 180 days
         end = endOfDay(now);
         break;
       case 'yearly':
         start = startOfYear(now);
-        end = min([now, endOfMonth(now)]); 
+        end = min([endOfDay(now), endOfYear(now)]); // Data up to end of today, or end of year if earlier
         break;
-      default: 
+      default:
         start = now;
         end = now;
     }
@@ -196,7 +196,7 @@ export default function SalesAnalyticsPage() {
         const monthsInYear = eachMonthOfInterval({ start: intervalStart, end: intervalEnd });
         aggregatedData = monthsInYear.map(monthStart => {
           const monthEndPeriod = endOfMonth(monthStart);
-          const actualMonthEnd = min([intervalEnd, monthEndPeriod]); // Use actual interval end if it's before month end
+          const actualMonthEnd = min([intervalEnd, monthEndPeriod]);
           const monthSales = relevantSales.filter(s => isWithinInterval(new Date(s.saleTimestamp), { start: monthStart, end: actualMonthEnd }));
           return {
             dateLabel: format(monthStart, 'MMM', { locale: arSA }),
@@ -261,7 +261,6 @@ export default function SalesAnalyticsPage() {
   if (!isSalesLoaded || !isProductsLoaded) {
     return (
       <div className="flex flex-col min-h-screen bg-background">
-        {/* <AppHeader /> Removed, handled globally */}
         <main className="flex-grow flex items-center justify-center">
           <p className="text-foreground text-xl">جار تحميل تحليلات المبيعات...</p>
         </main>
@@ -271,7 +270,6 @@ export default function SalesAnalyticsPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      {/* <AppHeader /> Removed, handled globally */}
       <main className="flex-grow p-4 md:p-8 space-y-6">
         <Card className="shadow-lg rounded-lg">
           <CardHeader>
@@ -418,3 +416,5 @@ export default function SalesAnalyticsPage() {
     </div>
   );
 }
+
+    
