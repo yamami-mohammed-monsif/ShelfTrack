@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useMemo } from 'react'; // Added useMemo import
+import React from 'react';
 import {
   Table,
   TableBody,
@@ -11,48 +11,30 @@ import {
   TableRow,
   TableCaption,
 } from '@/components/ui/table';
-// Edit/Delete buttons removed for now
-// import { Button } from '@/components/ui/button';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import type { Sale, SaleItem } from '@/lib/types';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
-// import { Pencil, Trash2 } from 'lucide-react'; // Icons for edit/delete removed
+import { ChevronDown } from 'lucide-react';
+import { unitSuffix } from '@/lib/product-utils';
+import { cn } from '@/lib/utils';
 
 interface SalesTableProps {
-  sales: Sale[]; // Expects an array of Sale (transaction) objects
-  // Edit/Delete triggers are removed as their logic needs rework for new data model
-  // onEditSaleTrigger?: (sale: Sale, item: SaleItem) => void;
-  // onDeleteSaleTrigger?: (sale: Sale, item: SaleItem) => void;
-  showActions?: boolean; // Kept for future use, but actions are hidden now
+  sales: Sale[];
   showCaption?: boolean;
 }
 
-// Helper type for flattened items with transaction timestamp
-type DisplayableSaleItem = SaleItem & {
-  transaction_timestamp: number;
-  transaction_id: string;
-};
-
 export function SalesTable({
   sales,
-  // onEditSaleTrigger,
-  // onDeleteSaleTrigger,
-  showActions = false, // Actions are effectively disabled for now
   showCaption = true,
 }: SalesTableProps) {
 
-  const allSaleItemsWithDetails: DisplayableSaleItem[] = useMemo(() => {
-    if (!sales) return [];
-    return sales.flatMap(transaction =>
-      (transaction.items || []).map(item => ({
-        ...item,
-        transaction_timestamp: transaction.sale_timestamp,
-        transaction_id: transaction.id,
-      }))
-    ).sort((a, b) => b.transaction_timestamp - a.transaction_timestamp);
-  }, [sales]);
-
-  if (allSaleItemsWithDetails.length === 0) {
+  if (!sales || sales.length === 0) {
     return (
       <div className="text-center py-10 px-4 text-muted-foreground">
         <p className="text-lg mb-2">لا توجد عمليات بيع مسجلة حالياً.</p>
@@ -66,53 +48,79 @@ export function SalesTable({
       <Table>
         {showCaption && (
           <TableCaption className="py-4">
-            سجل بجميعรายการ البيع المسجلة.
+            سجل بجميع عمليات البيع المسجلة. انقر لعرض تفاصيل المنتجات في كل عملية بيع.
           </TableCaption>
         )}
         <TableHeader>
           <TableRow>
-            <TableHead className="min-w-[150px] rtl:text-right">اسم المنتج</TableHead>
-            <TableHead className="text-center">الكمية المباعة</TableHead>
-            <TableHead className="text-center">سعر الوحدة (عند البيع)</TableHead>
-            <TableHead className="text-center">المبلغ الإجمالي للمنتج</TableHead>
-            <TableHead className="text-left rtl:text-right min-w-[150px]">تاريخ ووقت البيع</TableHead>
-            {/* Actions column is hidden as edit/delete logic needs rework
-            {showActions && <TableHead className="text-center">إجراءات</TableHead>}
-            */}
+            <TableHead className="min-w-[130px] rtl:text-right">التاريخ</TableHead>
+            <TableHead className="min-w-[100px] rtl:text-right">معرف البيع</TableHead>
+            <TableHead className="text-center min-w-[100px]">إجمالي المنتجات</TableHead>
+            <TableHead className="text-center min-w-[120px]">المبلغ الإجمالي</TableHead>
+            <TableHead className="text-center w-[120px]">التفاصيل</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {allSaleItemsWithDetails.map((item) => (
-            <TableRow key={item.id}>
-              <TableCell className="font-medium rtl:text-right">{item.productNameSnapshot}</TableCell>
-              <TableCell className="text-center">{item.quantitySold.toLocaleString()}</TableCell>
-              <TableCell className="text-center">
-                {item.retailPricePerUnitSnapshot.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
-              </TableCell>
-              <TableCell className="text-center font-semibold">
-                {item.itemTotalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
-              </TableCell>
-              <TableCell className="text-left rtl:text-right">
-                {format(new Date(item.transaction_timestamp), 'PPpp', { locale: arSA })}
-              </TableCell>
-              {/* Actions are hidden for now
-              {showActions && (
-                <TableCell className="text-center space-x-2 rtl:space-x-reverse">
-                  {onEditSaleTrigger && (
-                    <Button variant="outline" size="icon" onClick={() => onEditSaleTrigger(sales.find(s=>s.id === item.sale_id)!, item)} aria-label="تعديل البيع">
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {onDeleteSaleTrigger && (
-                    <Button variant="outline" size="icon" onClick={() => onDeleteSaleTrigger(sales.find(s=>s.id === item.sale_id)!, item)} aria-label="حذف البيع" className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/50">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </TableCell>
-              )}
-              */}
-            </TableRow>
-          ))}
+          <Accordion type="multiple" className="w-full">
+            {sales.sort((a,b) => b.sale_timestamp - a.sale_timestamp).map((transaction) => (
+              <AccordionItem value={transaction.id} key={transaction.id} className="border-b last:border-b-0">
+                {/* Main Transaction Row as AccordionTrigger */}
+                <TableRow className="hover:bg-muted/30 data-[state=open]:bg-muted/40">
+                  <TableCell className="font-medium rtl:text-right">
+                    {format(new Date(transaction.sale_timestamp), 'yyyy-MM-dd HH:mm', { locale: arSA })}
+                  </TableCell>
+                  <TableCell className="rtl:text-right">{transaction.id.substring(0, 8).toUpperCase()}</TableCell>
+                  <TableCell className="text-center">{transaction.items.length}</TableCell>
+                  <TableCell className="text-center font-semibold">
+                    {transaction.total_transaction_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <AccordionTrigger className="p-2 hover:bg-accent/50 rounded-md w-full justify-center group">
+                       <ChevronDown className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                       <span className="sr-only">عرض التفاصيل</span>
+                    </AccordionTrigger>
+                  </TableCell>
+                </TableRow>
+
+                {/* AccordionContent containing the sub-table for items */}
+                <AccordionContent asChild>
+                  <TableRow className="bg-muted/10 hover:bg-muted/20">
+                    <TableCell colSpan={5} className="p-0">
+                      <div className="p-4 space-y-2">
+                        <h4 className="font-semibold text-sm text-muted-foreground">المنتجات المباعة في هذه العملية:</h4>
+                        <Table className="bg-background rounded-md shadow-sm">
+                          <TableHeader>
+                            <TableRow className="border-b-0">
+                              <TableHead className="rtl:text-right">اسم المنتج</TableHead>
+                              <TableHead className="text-center">الكمية</TableHead>
+                              <TableHead className="text-center">سعر الوحدة</TableHead>
+                              <TableHead className="text-center">إجمالي المنتج</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {transaction.items.map((item) => (
+                              <TableRow key={item.id} className="border-b-0 last:border-b-0">
+                                <TableCell className="font-medium rtl:text-right">{item.productNameSnapshot}</TableCell>
+                                <TableCell className="text-center">
+                                  {item.quantitySold.toLocaleString()} {item.productType ? unitSuffix[item.productType] : ''}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  {item.retailPricePerUnitSnapshot.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
+                                </TableCell>
+                                <TableCell className="text-center font-semibold">
+                                  {item.itemTotalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.ج
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         </TableBody>
       </Table>
     </div>
