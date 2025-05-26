@@ -115,6 +115,10 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
   });
    
   useEffect(() => {
+    // Re-validate or update schema context if products/cartItems change
+    // This ensures the schema has the latest stock info for validation
+    // @ts-ignore 
+    addItemForm.resolver = zodResolver(createAddItemFormSchema(productsRef.current, cartItemsRef.current));
     addItemForm.trigger(); 
   }, [products, cartItems, addItemForm]);
 
@@ -263,54 +267,12 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
             onSubmit={addItemForm.handleSubmit(handleAddItemToCart)}
             className="mb-4 p-1" 
           >
-            <div className="flex flex-row-reverse items-start gap-2"> {/* Reverse for RTL visual order */}
-               <Button 
-                type="submit" 
-                size="default" 
-                className="min-h-[2.5rem]" 
-                disabled={!addItemForm.formState.isDirty || !addItemForm.formState.isValid || !addItemForm.getValues('productId')}
-               >
-                <PlusCircle className="me-2 h-5 w-5" />
-                إضافة
-              </Button>
-              <FormField
-                control={addItemForm.control}
-                name="quantity"
-                render={({ field }) => (
-                  <FormItem className="w-24"> 
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        step={quantityStepForAddItemForm}
-                        {...field}
-                        value={field.value === undefined || Number.isNaN(Number(field.value)) ? "" : field.value}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          const valueAsString = e.target.value;
-                          if (valueAsString === "" || valueAsString === "-") {
-                            field.onChange(undefined);
-                          } else {
-                            const valueAsNum = e.target.valueAsNumber;
-                            if (Number.isNaN(valueAsNum)) {
-                              field.onChange(valueAsString); 
-                            } else {
-                              field.onChange(valueAsNum);
-                            }
-                          }
-                        }}
-                        disabled={!addItemForm.getValues('productId')}
-                        className="min-h-[2.5rem] text-center"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-2">
                <FormField 
                 control={addItemForm.control}
                 name="productId"
                 render={({ field }) => (
-                  <FormItem className="flex-1">
+                  <FormItem className="w-full"> {/* Changed from flex-1 to w-full */}
                     <Popover open={productComboboxOpen} onOpenChange={setProductComboboxOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -353,11 +315,53 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                   </FormItem>
                 )}
               />
+              <FormField
+                control={addItemForm.control}
+                name="quantity"
+                render={({ field }) => (
+                  <FormItem className="w-full sm:w-24"> 
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        step={quantityStepForAddItemForm}
+                        {...field}
+                        value={field.value === undefined || Number.isNaN(Number(field.value)) ? "" : field.value}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          const valueAsString = e.target.value;
+                          if (valueAsString === "" || valueAsString === "-") {
+                            field.onChange(undefined);
+                          } else {
+                            const valueAsNum = e.target.valueAsNumber;
+                            if (Number.isNaN(valueAsNum)) {
+                              field.onChange(valueAsString); 
+                            } else {
+                              field.onChange(valueAsNum);
+                            }
+                          }
+                        }}
+                        disabled={!addItemForm.getValues('productId')}
+                        className="min-h-[2.5rem] text-center"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <Button 
+                type="submit" 
+                size="default" 
+                className="min-h-[2.5rem] w-full sm:w-auto" 
+                disabled={!addItemForm.formState.isDirty || !addItemForm.formState.isValid || !addItemForm.getValues('productId')}
+               >
+                <PlusCircle className="me-2 h-5 w-5" />
+                إضافة
+              </Button>
             </div>
           </form>
         </Form>
         
-        <ScrollArea className="flex-grow border rounded-md p-1 mb-4 bg-muted/20">
+        <ScrollArea className="flex-grow border rounded-md p-1 mb-4 bg-muted/20"> {/* Removed max-h-[300px] */}
           {cartItems.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">السلة فارغة</p>
           ) : (
@@ -388,7 +392,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
           </div>
         )}
             
-        <div className="mb-4">
+        <div className="mb-4 p-1"> {/* Added p-1 for consistency */}
            <Label htmlFor="saleTimestampRecordModal" className="flex items-center mb-1">
             <CalendarClock className="me-2 h-4 w-4 text-muted-foreground" />
             تاريخ ووقت البيع
@@ -405,7 +409,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
             }
         </div>
        
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-2 sm:gap-0 p-1 pt-2"> {/* Added p-1 pt-2 */}
           <Button type="button" variant="outline" onClick={onClose}>
             إلغاء
           </Button>
@@ -423,3 +427,4 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
     </Dialog>
   );
 }
+
