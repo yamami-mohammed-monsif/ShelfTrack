@@ -53,15 +53,21 @@ interface RecordSaleModalProps {
 }
 
 const createAddItemFormSchema = (allProducts: Product[], currentCartItems: CartItem[]) => z.object({
-  productId: z.string().min(1), // Removed custom message
+  productId: z.string(), // Removed .min(1)
   quantity: z.coerce
     .number({
       required_error: "الكمية مطلوبة.",
-      // invalid_type_error removed
+      invalid_type_error: "الكمية يجب أن تكون رقماً." // Custom message for coercion failure
     })
     .positive({ message: 'الكمية يجب أن تكون أكبر من صفر.' }),
 }).superRefine((values, ctx) => {
-  if (!values.productId) return;
+  if (!values.productId) {
+    // This case should ideally be prevented by UI (disabled button if no product ID)
+    // but if it somehow gets here, it's an issue.
+    // Since .min(1) is removed, an empty string for productId won't fail the base string check.
+    // We rely on the button disabled state for this.
+    return;
+  }
 
   const product = allProducts.find(p => p.id === values.productId);
   if (!product) {
@@ -71,7 +77,9 @@ const createAddItemFormSchema = (allProducts: Product[], currentCartItems: CartI
 
   if (typeof values.quantity !== 'number' || Number.isNaN(values.quantity)) {
     if (values.quantity !== undefined) { 
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "الكمية يجب أن تكون رقماً صالحاً.", path: ['quantity'] });
+      // This specific message might be overridden by invalid_type_error if coercion failed.
+      // If invalid_type_error is set, "الكمية يجب أن تكون رقماً." will show.
+      // If it's undefined due to required_error, "الكمية مطلوبة." will show.
     }
     return;
   }
@@ -149,7 +157,8 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
   const handleAddItemToCart = (data: AddToCartFormData) => {
     const product = products.find(p => p.id === data.productId);
     if (!product) {
-      toast({ title: "خطأ", description: "المنتج غير موجود.", variant: "destructive" });
+      // This should ideally be caught by Zod validation if product ID is invalid
+      toast({ title: "خطأ", description: "المنتج غير موجود أو غير محدد.", variant: "destructive" });
       return;
     }
 
@@ -160,6 +169,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
         const existingItem = updatedCartItems[existingCartItemIndex];
         const newQuantity = existingItem.quantitySold + data.quantity;
         
+        // This check is also in Zod, but good for an immediate UI feedback if needed before submit
         if (newQuantity > product.quantity) {
             addItemForm.setError("quantity", { 
                 type: "manual", 
@@ -193,6 +203,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
     addItemForm.reset({ productId: '', quantity: undefined });
     setProductSearchValue(""); 
     addItemForm.clearErrors();
+    // addItemForm.setFocus('productId'); // Optionally refocus product selector
   };
   
   const handleRemoveItemFromCart = (tempId: string) => {
@@ -264,7 +275,49 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
             onSubmit={addItemForm.handleSubmit(handleAddItemToCart)}
             className="mb-4 p-1" 
           >
-            <div className="flex items-start gap-2"> 
+            <div className="flex flex-row-reverse items-start gap-2"> {/* Reverse for RTL visual order */}
+               <Button 
+                type="submit" 
+                size="default" 
+                className="min-h-[2.5rem]" 
+                disabled={!addItemForm.formState.isDirty || !addItemForm.formState.isValid || !addItemForm.getValues('productId')}
+               >
+                <PlusCircle className="me-2 h-5 w-5" />
+                إضافة
+              </Button>
+              <FormField
+                control={addItemForm.control}
+                name="quantity"
+                render={({ field }) => (
+                  <FormItem className="w-24"> 
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        step={quantityStepForAddItemForm}
+                        {...field}
+                        value={field.value === undefined || Number.isNaN(Number(field.value)) ? "" : field.value}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          const valueAsString = e.target.value;
+                          if (valueAsString === "" || valueAsString === "-") {
+                            field.onChange(undefined);
+                          } else {
+                            const valueAsNum = e.target.valueAsNumber;
+                            if (Number.isNaN(valueAsNum)) {
+                              field.onChange(valueAsString); 
+                            } else {
+                              field.onChange(valueAsNum);
+                            }
+                          }
+                        }}
+                        disabled={!addItemForm.getValues('productId')}
+                        className="min-h-[2.5rem] text-center"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
                <FormField 
                 control={addItemForm.control}
                 name="productId"
@@ -312,43 +365,6 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                   </FormItem>
                 )}
               />
-              <FormField
-                control={addItemForm.control}
-                name="quantity"
-                render={({ field }) => (
-                  <FormItem className="w-24"> 
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        step={quantityStepForAddItemForm}
-                        {...field}
-                        value={field.value === undefined || Number.isNaN(Number(field.value)) ? "" : field.value}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          const valueAsString = e.target.value;
-                          if (valueAsString === "" || valueAsString === "-") {
-                            field.onChange(undefined);
-                          } else {
-                            const valueAsNum = e.target.valueAsNumber;
-                            if (Number.isNaN(valueAsNum)) {
-                              field.onChange(valueAsString); 
-                            } else {
-                              field.onChange(valueAsNum);
-                            }
-                          }
-                        }}
-                        disabled={!addItemForm.getValues('productId')}
-                        className="min-h-[2.5rem] text-center"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" size="default" className="min-h-[2.5rem]" disabled={!addItemForm.formState.isDirty || !addItemForm.formState.isValid || !addItemForm.getValues('productId')}>
-                <PlusCircle className="me-2 h-5 w-5" />
-                إضافة
-              </Button>
             </div>
           </form>
         </Form>
@@ -357,7 +373,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
           {cartItems.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">السلة فارغة</p>
           ) : (
-            <div className="space-y-3 p-2"> {/* Added p-2 here for inner spacing */}
+            <div className="space-y-3 p-2">
               <h3 className="text-md font-semibold flex items-center sticky top-0 bg-muted/20 py-1 -mt-2 -mx-2 px-2 border-b mb-3 z-10">
                 <ListOrdered className="me-2 h-5 w-5 text-primary"/>السلة ({cartItems.length})
               </h3>
@@ -385,7 +401,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
         )}
             
         <div className="mb-4">
-          <Label htmlFor="saleTimestampRecordModal" className="flex items-center mb-1">
+           <Label htmlFor="saleTimestampRecordModal" className="flex items-center mb-1">
             <CalendarClock className="me-2 h-4 w-4 text-muted-foreground" />
             تاريخ ووقت البيع
           </Label>
@@ -401,7 +417,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
             }
         </div>
        
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:gap-0">
           <Button type="button" variant="outline" onClick={onClose}>
             إلغاء
           </Button>
