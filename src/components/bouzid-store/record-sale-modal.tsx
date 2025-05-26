@@ -53,11 +53,11 @@ interface RecordSaleModalProps {
 }
 
 const createAddItemFormSchema = (allProducts: Product[], currentCartItems: CartItem[]) => z.object({
-  productId: z.string(), 
+  productId: z.string(),
   quantity: z.coerce
     .number({
       required_error: "الكمية مطلوبة.",
-      invalid_type_error: "" 
+      invalid_type_error: ""
     })
     .positive({ message: 'الكمية يجب أن تكون أكبر من صفر.' }),
 }).superRefine((values, ctx) => {
@@ -82,7 +82,7 @@ const createAddItemFormSchema = (allProducts: Product[], currentCartItems: CartI
   const quantityAlreadyInCart = currentCartItems
     .filter(item => item.product_id === values.productId)
     .reduce((sum, item) => sum + item.quantitySold, 0);
-  
+
   const totalQuantityRequested = quantityAlreadyInCart + values.quantity;
 
   if (totalQuantityRequested > product.quantity) {
@@ -99,7 +99,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
   const { toast } = useToast();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [saleTimestampString, setSaleTimestampString] = useState(new Date().toISOString().slice(0, 16));
-  
+
   const [productComboboxOpen, setProductComboboxOpen] = useState(false);
   const [productSearchValue, setProductSearchValue] = useState("");
 
@@ -113,13 +113,13 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
     resolver: zodResolver(createAddItemFormSchema(productsRef.current, cartItemsRef.current)),
     defaultValues: { productId: '', quantity: undefined },
   });
-   
+
   useEffect(() => {
     // Re-validate or update schema context if products/cartItems change
     // This ensures the schema has the latest stock info for validation
-    // @ts-ignore 
+    // @ts-ignore
     addItemForm.resolver = zodResolver(createAddItemFormSchema(productsRef.current, cartItemsRef.current));
-    addItemForm.trigger(); 
+    addItemForm.trigger();
   }, [products, cartItems, addItemForm]);
 
 
@@ -143,7 +143,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
 
   const handleProductSelect = (product: Product) => {
     addItemForm.setValue('productId', product.id, { shouldValidate: true });
-    setProductSearchValue(product.name); 
+    setProductSearchValue(product.name);
     setProductComboboxOpen(false);
     addItemForm.setFocus('quantity');
     addItemForm.clearErrors('productId');
@@ -162,15 +162,15 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
         const updatedCartItems = [...cartItems];
         const existingItem = updatedCartItems[existingCartItemIndex];
         const newQuantity = existingItem.quantitySold + data.quantity;
-        
+
         if (newQuantity > product.quantity) {
-            addItemForm.setError("quantity", { 
-                type: "manual", 
+            addItemForm.setError("quantity", {
+                type: "manual",
                 message: `الكمية الإجمالية (${newQuantity.toLocaleString()}) لـ "${product.name}" تتجاوز المخزون (${product.quantity.toLocaleString()}).`
             });
             return;
         }
-        
+
         updatedCartItems[existingCartItemIndex] = {
             ...existingItem,
             quantitySold: newQuantity,
@@ -194,10 +194,10 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
 
     toast({ title: "تمت الإضافة", description: `تم إضافة ${data.quantity.toLocaleString()} من "${product.name}" إلى السلة.`, variant: "default" });
     addItemForm.reset({ productId: '', quantity: undefined });
-    setProductSearchValue(""); 
+    setProductSearchValue("");
     addItemForm.clearErrors();
   };
-  
+
   const handleRemoveItemFromCart = (tempId: string) => {
     setCartItems(prevItems => prevItems.filter(item => item.tempId !== tempId));
   };
@@ -224,7 +224,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
       id: finalSaleId,
       sale_timestamp: saleTimestamp,
       items: cartItems.map(cartItem => ({
-        id: crypto.randomUUID(), 
+        id: crypto.randomUUID(),
         sale_id: finalSaleId,
         product_id: cartItem.product_id,
         productNameSnapshot: cartItem.productNameSnapshot,
@@ -241,7 +241,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
     onRecordSale(saleToRecord);
     onClose();
   };
-  
+
   const selectedProductForAddItemForm = products.find(p => p.id === addItemForm.watch('productId'));
   const quantityStepForAddItemForm = useMemo(() => {
     if (selectedProductForAddItemForm?.type === 'unit') return '1';
@@ -252,7 +252,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       if (!open) onClose();
-      setProductComboboxOpen(false); 
+      setProductComboboxOpen(false);
     }}>
       <DialogContent className="sm:max-w-lg bg-card text-card-foreground flex flex-col max-h-[90vh] p-4 sm:p-6">
         <DialogHeader className="mb-2">
@@ -265,10 +265,10 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
         <Form {...addItemForm}>
           <form
             onSubmit={addItemForm.handleSubmit(handleAddItemToCart)}
-            className="mb-4 p-1" 
+            className="mb-4 p-1"
           >
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-2"> {/* Product, Quantity, Add Button container */}
-               <FormField 
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-2">
+               <FormField
                 control={addItemForm.control}
                 name="productId"
                 render={({ field }) => (
@@ -319,7 +319,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                 control={addItemForm.control}
                 name="quantity"
                 render={({ field }) => (
-                  <FormItem className="w-full sm:w-24"> 
+                  <FormItem className="w-full sm:w-24">
                     <FormControl>
                       <Input
                         type="number"
@@ -334,24 +334,24 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
                           } else {
                             const valueAsNum = e.target.valueAsNumber;
                             if (Number.isNaN(valueAsNum)) {
-                              field.onChange(valueAsString); 
+                              field.onChange(valueAsString);
                             } else {
                               field.onChange(valueAsNum);
                             }
                           }
                         }}
                         disabled={!addItemForm.getValues('productId')}
-                        className="min-h-[2.5rem] text-center"
+                        className="min-h-[2.5rem]"
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-               <Button 
-                type="submit" 
-                size="default" 
-                className="min-h-[2.5rem] w-full sm:w-auto" 
+               <Button
+                type="submit"
+                size="default"
+                className="min-h-[2.5rem] w-full sm:w-auto"
                 disabled={!addItemForm.formState.isDirty || !addItemForm.formState.isValid || !addItemForm.getValues('productId')}
                >
                 <PlusCircle className="me-2 h-5 w-5" />
@@ -360,7 +360,7 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
             </div>
           </form>
         </Form>
-        
+
         <ScrollArea className="flex-grow border rounded-md p-1 mb-4 bg-muted/20">
           {cartItems.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">السلة فارغة</p>
@@ -391,32 +391,32 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
             {grandTotal.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} د.ج
           </div>
         )}
-            
+
         <div className="mb-4 p-1">
            <Label htmlFor="saleTimestampRecordModal" className="flex items-center mb-1">
             <CalendarClock className="me-2 h-4 w-4 text-muted-foreground" />
             تاريخ ووقت البيع
           </Label>
-          <Input 
+          <Input
             id="saleTimestampRecordModal"
-            type="datetime-local" 
+            type="datetime-local"
             value={saleTimestampString}
             onChange={(e) => setSaleTimestampString(e.target.value)}
             className="text-right w-full min-h-[2.5rem]"
           />
             { isNaN(new Date(saleTimestampString).getTime()) && cartItems.length > 0 &&
-              <p className="text-sm font-medium text-destructive mt-1">التاريخ والوقت غير صالح.</p> 
+              <p className="text-sm font-medium text-destructive mt-1">التاريخ والوقت غير صالح.</p>
             }
         </div>
-       
+
         <DialogFooter className="gap-2 sm:gap-0 p-1 pt-2">
           <Button type="button" variant="outline" onClick={onClose}>
             إلغاء
           </Button>
-          <Button 
-            type="button" 
-            variant="default" 
-            onClick={handleFinalizeSale} 
+          <Button
+            type="button"
+            variant="default"
+            onClick={handleFinalizeSale}
             disabled={cartItems.length === 0 || isNaN(new Date(saleTimestampString).getTime())}
           >
             <ShoppingCart className="ms-2 h-4 w-4" />
@@ -427,4 +427,3 @@ export function RecordSaleModal({ isOpen, onClose, onRecordSale, products }: Rec
     </Dialog>
   );
 }
-
