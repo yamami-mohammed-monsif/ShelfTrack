@@ -12,8 +12,10 @@ import { useSalesStorage } from '@/hooks/use-sales-storage';
 import { isLowStock } from '@/lib/product-utils';
 import {
   startOfDay, endOfDay,
+  startOfWeek, endOfWeek,
   isSameDay,
 } from 'date-fns';
+import { arSA } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
 interface SalesDashboardProps {
@@ -41,9 +43,6 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
       todaySalesValue: 0,
       todayProfit: 0,
     };
-
-    const todayStart = startOfDay(todayRefDate); 
-    const todayEnd = endOfDay(todayRefDate);     
     
     const salesToday = sales.filter(s => isSameDay(new Date(s.saleTimestamp), todayRefDate));
 
@@ -77,7 +76,7 @@ export function SalesDashboard({ products }: SalesDashboardProps) {
   }
 
   return (
-    <div className="space-y-8 pt-4 pb-8"> 
+    <div className="space-y-8 pt-4 pb-8 px-4"> 
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2"> 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
