@@ -16,7 +16,8 @@ import {
 import { Toaster } from "@/components/ui/toaster";
 import { AppHeader } from '@/components/bouzid-store/app-header';
 import { SidebarExportButton } from '@/components/bouzid-store/sidebar-export-button';
-import { SidebarRestoreButton } from '@/components/bouzid-store/sidebar-restore-button'; // New import
+import { SidebarRestoreButton } from '@/components/bouzid-store/sidebar-restore-button';
+import { SidebarResetButton } from '@/components/bouzid-store/sidebar-reset-button'; // New import
 import './globals.css';
 
 const geistSans = Geist({
@@ -97,7 +98,8 @@ export default function RootLayout({
                       </SidebarMenuButton>
                     </Link>
                   </SidebarMenuItem>
-                  <SidebarRestoreButton /> {/* Added Restore Button */}
+                  <SidebarRestoreButton />
+                  <SidebarResetButton /> {/* Added Reset Button to Sidebar */}
                 </SidebarMenu>
               </SidebarContent>
             </Sidebar>

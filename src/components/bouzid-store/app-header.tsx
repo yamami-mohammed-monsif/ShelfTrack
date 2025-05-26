@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle,
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Menu, Bell, RotateCcw, Home, Archive, ClipboardList, LineChart as LineChartIcon, Download, History, Upload } from 'lucide-react'; // Added Upload
+import { Menu, Bell, RotateCcw, Home, Archive, ClipboardList, LineChart as LineChartIcon, Download, History, Upload } from 'lucide-react';
 import { useNotificationsStorage } from '@/hooks/use-notifications-storage';
 import { useProductsStorage } from '@/hooks/use-products-storage';
 import { useSalesStorage } from '@/hooks/use-sales-storage';
@@ -18,7 +18,7 @@ import { formatDistanceToNow, startOfWeek, endOfWeek, format as formatDateFns } 
 import { arSA } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import type { Notification, Product, Sale } from '@/lib/types';
-import { triggerRestoreFileInput } from '@/components/bouzid-store/sidebar-restore-button'; // Import trigger function
+import { triggerRestoreFileInput } from '@/components/bouzid-store/sidebar-restore-button';
 
 
 export function AppHeader() {
@@ -27,25 +27,26 @@ export function AppHeader() {
   const { sales, clearAllSales } = useSalesStorage();
   const { addLogEntry: addBackupLogEntry, clearAllBackupLogs } = useBackupLogStorage();
   const { toast } = useToast();
-  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isMobileResetDialogOpen, setIsMobileResetDialogOpen] = useState(false); // Renamed for clarity
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleNotificationClick = (notificationId: string) => {
     markAsRead(notificationId);
   };
 
-  const handleResetAllData = () => {
+  // This handler is now specifically for the mobile menu reset
+  const handleMobileResetAllData = () => {
     clearAllProducts();
     clearAllSales();
     clearAllNotificationData();
-    clearAllBackupLogs(); // Also clear backup logs
+    clearAllBackupLogs();
     toast({
       title: "نجاح",
       description: "تمت إعادة تعيين جميع بيانات التطبيق بنجاح.",
       variant: "default",
     });
-    setIsResetDialogOpen(false);
-    setIsMobileMenuOpen(false);
+    setIsMobileResetDialogOpen(false);
+    setIsMobileMenuOpen(false); // Close mobile menu
   };
 
   const handleDownloadData = () => {
@@ -93,7 +94,7 @@ export function AppHeader() {
       description: `تم تصدير البيانات بنجاح إلى الملف: ${fileName}`,
       variant: "default",
     });
-    setIsMobileMenuOpen(false); // Close mobile menu if export was triggered from there
+    setIsMobileMenuOpen(false); 
   };
 
 
@@ -105,7 +106,6 @@ export function AppHeader() {
         </Link>
 
         <div className="flex items-center gap-2">
-          {/* Notification Bell - Visible on all screens */}
           {notificationsLoaded && (
             <Popover>
               <PopoverTrigger asChild>
@@ -149,7 +149,7 @@ export function AppHeader() {
                           className={cn(
                             "block p-3 hover:bg-muted/50",
                             !notification.read && "bg-primary/10",
-                            !notification.href && "cursor-default" // removed pointer-events-none for Link
+                            !notification.href && "cursor-default"
                           )}
                         >
                           <p className={cn(
@@ -180,32 +180,7 @@ export function AppHeader() {
             </Popover>
           )}
 
-          {/* Desktop-only Reset Button */}
-          <div className="hidden md:flex items-center">
-             {/* Desktop Export Data Button - Removed from here, moved to SidebarExportButton */}
-            <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" className="text-primary-foreground hover:bg-red-500/90 hover:text-white px-2 sm:px-3 py-2">
-                  <RotateCcw className="me-1 sm:me-2 h-5 w-5" />
-                  إعادة تعيين
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent dir="rtl">
-                <AlertDialogHeader>
-                  <AlertDialogTitle>تأكيد إعادة التعيين</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    هل أنت متأكد أنك تريد إعادة تعيين جميع بيانات التطبيق؟ سيتم حذف جميع المنتجات والمبيعات والإشعارات وسجل النسخ بشكل دائم. لا يمكن التراجع عن هذا الإجراء.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel onClick={() => setIsResetDialogOpen(false)}>إلغاء</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleResetAllData} className={cn(buttonVariants({variant: "destructive"}))}>
-                    تأكيد وإعادة التعيين
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+          {/* Desktop-only Reset Button REMOVED from here */}
 
           {/* Mobile Navigation (Hamburger Menu) */}
           <div className="md:hidden">
@@ -280,7 +255,7 @@ export function AppHeader() {
                        <Button
                         variant="ghost"
                         onClick={() => {
-                            triggerRestoreFileInput(); // Call imported function
+                            triggerRestoreFileInput(); 
                             setIsMobileMenuOpen(false);
                         }}
                         className="justify-start text-lg text-foreground hover:bg-accent hover:text-accent-foreground w-full"
@@ -288,17 +263,32 @@ export function AppHeader() {
                         <Upload className="me-3 h-5 w-5" />
                         استعادة البيانات
                       </Button>
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          setIsMobileMenuOpen(false);
-                          setIsResetDialogOpen(true);
-                        }}
-                        className="justify-start text-lg text-destructive hover:bg-destructive/10 hover:text-destructive w-full"
-                      >
-                        <RotateCcw className="me-3 h-5 w-5" />
-                        إعادة تعيين
-                      </Button>
+                      {/* Mobile Reset Button Dialog */}
+                      <AlertDialog open={isMobileResetDialogOpen} onOpenChange={setIsMobileResetDialogOpen}>
+                        <AlertDialogTrigger asChild>
+                           <Button
+                            variant="ghost"
+                            className="justify-start text-lg text-destructive hover:bg-destructive/10 hover:text-destructive w-full"
+                          >
+                            <RotateCcw className="me-3 h-5 w-5" />
+                            إعادة تعيين
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent dir="rtl">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>تأكيد إعادة التعيين</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              هل أنت متأكد أنك تريد إعادة تعيين جميع بيانات التطبيق؟ سيتم حذف جميع المنتجات والمبيعات والإشعارات وسجل النسخ بشكل دائم. لا يمكن التراجع عن هذا الإجراء.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel onClick={() => setIsMobileResetDialogOpen(false)}>إلغاء</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleMobileResetAllData} className={cn(buttonVariants({variant: "destructive"}))}>
+                              تأكيد وإعادة التعيين
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                   </div>
                 </div>
               </SheetContent>
