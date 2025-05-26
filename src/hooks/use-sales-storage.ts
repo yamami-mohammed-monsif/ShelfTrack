@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { Sale, Product, SaleItem, EditSaleFormData } from '@/lib/types';
+import type { Sale } from '@/lib/types'; // EditSaleFormData and Product removed as they are not used here directly
 
 const SALES_STORAGE_KEY = 'shelftrack_sales';
 
@@ -34,9 +34,39 @@ type SalesAction =
 function salesReducer(currentTransactions: Sale[], action: SalesAction): Sale[] {
   switch (action.type) {
     case SalesActionTypes.SET_LOADED:
-      return action.payload.sort((a, b) => b.sale_timestamp - a.sale_timestamp);
+      const now = Date.now();
+      return action.payload
+        .map(sale => ({
+          ...sale,
+          id: sale.id || crypto.randomUUID(), // Ensure ID exists
+          sale_timestamp: typeof sale.sale_timestamp === 'number' && !isNaN(sale.sale_timestamp) ? sale.sale_timestamp : now,
+          total_transaction_amount: typeof sale.total_transaction_amount === 'number' && !isNaN(sale.total_transaction_amount) ? sale.total_transaction_amount : 0,
+          items: Array.isArray(sale.items) ? sale.items.map(item => ({
+            ...item,
+            id: item.id || crypto.randomUUID(),
+            product_id: item.product_id || 'unknown_product',
+            productNameSnapshot: item.productNameSnapshot || 'Unknown Product',
+            quantitySold: typeof item.quantitySold === 'number' && !isNaN(item.quantitySold) ? item.quantitySold : 0,
+            wholesalePricePerUnitSnapshot: typeof item.wholesalePricePerUnitSnapshot === 'number' && !isNaN(item.wholesalePricePerUnitSnapshot) ? item.wholesalePricePerUnitSnapshot : 0,
+            retailPricePerUnitSnapshot: typeof item.retailPricePerUnitSnapshot === 'number' && !isNaN(item.retailPricePerUnitSnapshot) ? item.retailPricePerUnitSnapshot : 0,
+            itemTotalAmount: typeof item.itemTotalAmount === 'number' && !isNaN(item.itemTotalAmount) ? item.itemTotalAmount : 0,
+            // productType can be optional
+          })) : [],
+          created_at: typeof sale.created_at === 'number' && !isNaN(sale.created_at) ? sale.created_at : now,
+          updated_at: typeof sale.updated_at === 'number' && !isNaN(sale.updated_at) ? sale.updated_at : now,
+        }))
+        .sort((a, b) => b.sale_timestamp - a.sale_timestamp);
     case SalesActionTypes.ADD_TRANSACTION:
-      return [action.payload.newTransaction, ...currentTransactions].sort((a, b) => b.sale_timestamp - a.sale_timestamp);
+      // Ensure the new transaction and its items also have valid IDs if not provided
+      const newTransactionWithIds = {
+        ...action.payload.newTransaction,
+        id: action.payload.newTransaction.id || crypto.randomUUID(),
+        items: action.payload.newTransaction.items.map(item => ({
+          ...item,
+          id: item.id || crypto.randomUUID(),
+        }))
+      };
+      return [newTransactionWithIds, ...currentTransactions].sort((a, b) => b.sale_timestamp - a.sale_timestamp);
     case SalesActionTypes.CLEAR_ALL_SALES:
       return [];
     default:
@@ -80,10 +110,11 @@ export function useSalesStorage() {
         const storedSales = localStorage.getItem(SALES_STORAGE_KEY);
         if (storedSales) {
           initialSales = JSON.parse(storedSales);
-          initialSales = initialSales.map(s => ({ ...s, items: Array.isArray(s.items) ? s.items : [] }));
+          // Initial sanitization moved to reducer for consistency
         }
       } catch (error) {
         console.error("Failed to load sales from localStorage:", error);
+        initialSales = []; // Ensure it's an array on error
       }
       dispatchSales({ type: SalesActionTypes.SET_LOADED, payload: initialSales });
     }
@@ -105,21 +136,9 @@ export function useSalesStorage() {
 
   const addSaleTransaction = useCallback((newTransaction: Sale): Sale => {
     dispatchSales({ type: SalesActionTypes.ADD_TRANSACTION, payload: { newTransaction } });
-    return newTransaction;
+    return newTransaction; // Note: The actual object in memoryStateSales will have IDs if they were generated.
   }, []);
 
-
-  // Edit/Delete logic for transactions needs careful design (e.g., edit item in transaction, delete item, delete whole transaction)
-  // For now, these are placeholders and would need significant updates.
-  // const editSale = useCallback((saleId: string, updatedData: EditSaleFormData): Sale | undefined => {
-  //   console.warn("editSale functionality needs to be updated for multi-item transactions.");
-  //   return memoryStateSales.sales.find(s => s.id === saleId);
-  // }, []);
-
-  // const deleteSale = useCallback((saleId: string): boolean => {
-  //   console.warn("deleteSale functionality needs to be updated for multi-item transactions.");
-  //   return false;
-  // }, []);
 
   const getSaleById = useCallback((saleId: string): Sale | undefined => {
     return state.sales.find(s => s.id === saleId);
@@ -129,7 +148,7 @@ export function useSalesStorage() {
     dispatchSales({ type: SalesActionTypes.CLEAR_ALL_SALES });
   }, []);
 
-  const salesDispatchHook = useCallback((action: SalesAction) => { // Renamed to avoid conflict
+  const salesDispatchHook = useCallback((action: SalesAction) => {
      dispatchSales(action);
   },[]);
 
@@ -139,9 +158,7 @@ export function useSalesStorage() {
 
   return {
     sales: allSalesTransactions,
-    addSaleTransaction, // Exposed the correctly named function
-    // editSale, // Needs rework
-    // deleteSale, // Needs rework
+    addSaleTransaction,
     getSaleById,
     clearAllSales,
     dispatchSales: salesDispatchHook,

@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Table,
   TableBody,
@@ -17,16 +17,17 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import type { Sale, SaleItem } from '@/lib/types';
+import type { Sale } from '@/lib/types'; // SaleItem removed as it's part of Sale
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { ChevronDown } from 'lucide-react';
 import { unitSuffix } from '@/lib/product-utils';
-import { cn } from '@/lib/utils';
+// cn import removed as it's not used
 
 interface SalesTableProps {
   sales: Sale[];
   showCaption?: boolean;
+  // showActions, onEditSaleTrigger, onDeleteSaleTrigger props removed as actions are currently disabled
 }
 
 export function SalesTable({
@@ -42,6 +43,10 @@ export function SalesTable({
       </div>
     );
   }
+
+  // The sales are already sorted by timestamp in the hook/page level before being passed.
+  // If additional client-side sorting is needed here, it can be done.
+  // For now, we assume 'sales' prop is pre-sorted if desired.
 
   return (
     <div className="overflow-x-auto">
@@ -62,12 +67,14 @@ export function SalesTable({
         </TableHeader>
         <TableBody>
           <Accordion type="multiple" className="w-full">
-            {sales.sort((a,b) => b.sale_timestamp - a.sale_timestamp).map((transaction) => (
+            {sales.map((transaction) => (
               <AccordionItem value={transaction.id} key={transaction.id} className="border-b last:border-b-0">
                 {/* Main Transaction Row as AccordionTrigger */}
                 <TableRow className="hover:bg-muted/30 data-[state=open]:bg-muted/40">
                   <TableCell className="font-medium rtl:text-right">
-                    {format(new Date(transaction.sale_timestamp), 'yyyy-MM-dd HH:mm', { locale: arSA })}
+                    {typeof transaction.sale_timestamp === 'number' && !isNaN(transaction.sale_timestamp)
+                      ? format(new Date(transaction.sale_timestamp), 'yyyy-MM-dd HH:mm', { locale: arSA })
+                      : 'تاريخ غير صالح'}
                   </TableCell>
                   <TableCell className="rtl:text-right">{transaction.id.substring(0, 8).toUpperCase()}</TableCell>
                   <TableCell className="text-center">{transaction.items.length}</TableCell>
