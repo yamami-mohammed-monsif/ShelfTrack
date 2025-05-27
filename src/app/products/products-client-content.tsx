@@ -16,12 +16,11 @@ import { Package, Filter, ChevronsUpDown, Check } from 'lucide-react';
 import { isLowStock } from '@/lib/product-utils';
 import { cn } from '@/lib/utils';
 
-type ProductFilter = 'all' | ProductType | 'low-stock';
+type ProductFilter = 'all' | 'powder' | 'unit' | 'low-stock'; // Removed 'liquid'
 
 const filterLabels: Record<ProductFilter, string> = {
   all: 'الكل',
   powder: 'مسحوق',
-  liquid: 'سائل',
   unit: 'وحدة',
   'low-stock': 'مخزون منخفض',
 };
@@ -44,10 +43,10 @@ export default function ProductsClientContent() {
 
   useEffect(() => {
     const filterFromQuery = searchParams.get('filter');
-    if (filterFromQuery && Object.keys(filterLabels).includes(filterFromQuery) && filterFromQuery !== activeFilter) {
+    if (filterFromQuery && Object.keys(filterLabels).includes(filterFromQuery)) {
       setActiveFilter(filterFromQuery as ProductFilter);
     }
-  }, [searchParams]); // Removed activeFilter from dependency array
+  }, [searchParams]); 
 
   const handleOpenEditModal = (product: Product) => {
     setProductToEdit(product);
@@ -90,7 +89,6 @@ export default function ProductsClientContent() {
     return {
       all: products.length,
       powder: products.filter(p => p.type === 'powder').length,
-      liquid: products.filter(p => p.type === 'liquid').length,
       unit: products.filter(p => p.type === 'unit').length,
       'low-stock': products.filter(p => isLowStock(p)).length,
     };
@@ -221,8 +219,3 @@ export default function ProductsClientContent() {
     </div>
   );
 }
-    
-
-    
-
-    

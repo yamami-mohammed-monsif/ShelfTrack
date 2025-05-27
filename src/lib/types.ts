@@ -1,5 +1,5 @@
 
-export type ProductType = 'powder' | 'liquid' | 'unit';
+export type ProductType = 'powder' | 'unit'; // Removed 'liquid'
 
 export interface Product {
   id: string;
@@ -43,7 +43,7 @@ export interface SaleItem {
   wholesalePricePerUnitSnapshot: number;
   retailPricePerUnitSnapshot: number;
   itemTotalAmount: number; // Calculated: retailPricePerUnitSnapshot * quantitySold
-  productType?: ProductType; // Stored for easier display/logic if needed
+  productType: ProductType; // Stored for easier display/logic if needed
 }
 
 // Represents the overall sale transaction (invoice/receipt)

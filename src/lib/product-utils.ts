@@ -3,19 +3,16 @@ import type { Product, ProductType } from './types';
 
 export const productTypeLabels: Record<ProductType, string> = {
   powder: 'مسحوق',
-  liquid: 'سائل',
   unit: 'وحدة',
 };
 
 export const unitSuffix: Record<ProductType, string> = {
   powder: 'كجم',
-  liquid: 'لتر',
   unit: 'قطعة',
 };
 
 export const lowStockThresholds: Record<ProductType, number> = {
   powder: 1, // Highlight if quantity is less than 1 kg
-  liquid: 2, // Highlight if quantity is less than 2 liters
   unit: 3,   // Highlight if quantity is less than 3 items
 };
 

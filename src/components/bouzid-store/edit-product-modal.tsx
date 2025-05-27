@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Save, Package, Droplet, Weight } from 'lucide-react';
+import { Save, Package, Weight } from 'lucide-react'; // Removed Droplet
 
 import { Button } from '@/components/ui/button';
 import {
@@ -37,7 +37,7 @@ interface EditProductModalProps {
 
 const createProductFormSchema = () => z.object({
   name: z.string().min(2, { message: 'اسم المنتج يجب أن يكون حرفين على الأقل.' }),
-  type: z.enum(['powder', 'liquid', 'unit'], {
+  type: z.enum(['powder', 'unit'], { // Removed 'liquid'
     required_error: 'يجب اختيار نوع المنتج.',
   }),
   wholesalePrice: z.coerce
@@ -77,7 +77,6 @@ const createProductFormSchema = () => z.object({
 
 const unitLabels: Record<ProductType, { price: string; quantity: string; icon: React.ElementType }> = {
   powder: { price: 'للكيلوجرام (كجم)', quantity: 'كجم', icon: Weight },
-  liquid: { price: 'للتر (لتر)', quantity: 'لتر', icon: Droplet },
   unit: { price: 'للقطعة', quantity: 'قطعة', icon: Package },
 };
 
@@ -160,7 +159,7 @@ export function EditProductModal({ isOpen, onClose, onSaveEdit, productToEdit }:
                   <FormItem>
                     <FormLabel>اسم المنتج</FormLabel>
                     <FormControl>
-                      <Input placeholder="مثال: سكر, زيت, صابون..." {...field} />
+                      <Input placeholder="مثال: سكر, صابون..." {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -189,12 +188,6 @@ export function EditProductModal({ isOpen, onClose, onSaveEdit, productToEdit }:
                             <RadioGroupItem value="powder" />
                           </FormControl>
                           <FormLabel className="font-normal">مسحوق (مثل السكر، الدقيق)</FormLabel>
-                        </FormItem>
-                        <FormItem className="flex items-center space-s-3 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value="liquid" />
-                          </FormControl>
-                          <FormLabel className="font-normal">سائل (مثل الزيت، الحليب)</FormLabel>
                         </FormItem>
                         <FormItem className="flex items-center space-s-3 space-y-0">
                           <FormControl>
